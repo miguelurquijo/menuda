@@ -25,7 +25,6 @@ body {
   color: #2c3e50;
   margin-top: 60px;
   background-color: #fafafa !important;
-
 }
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&display=swap');
