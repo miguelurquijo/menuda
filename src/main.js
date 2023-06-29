@@ -10,7 +10,7 @@ app.use(gAuthPlugin, {
     clientId: gauthClientId, 
     scope: 'email', 
     prompt: 'consent', 
-    fetch_basic_profile: false, 
+    fetch_basic_profile: true, 
     plugin_name:'Cliente web 2 - menuda'
 });
 app.mount('#app')
