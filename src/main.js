@@ -1,6 +1,9 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 
+import router from './router'
+
+
 const app = createApp(App)
 import gAuthPlugin from 'vue3-google-oauth2';
 
@@ -12,5 +15,6 @@ app.use(gAuthPlugin, {
     prompt: 'consent', 
     fetch_basic_profile: true, 
     plugin_name:'Cliente web 2 - menuda'
-});
+    });
+app.use(router)
 app.mount('#app')
