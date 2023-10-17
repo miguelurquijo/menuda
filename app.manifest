@@ -1,5 +1,7 @@
 {
     ...
-    "display": "fullscreen",
+    "display": "standalone",
+    "start_url": "/?standalone=true"
+
     ...
 }
