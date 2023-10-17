@@ -6,6 +6,7 @@ import router from './router'
 
 const app = createApp(App)
 import gAuthPlugin from 'vue3-google-oauth2';
+import './registerServiceWorker'
 
 
 let gauthClientId = '347237759908-ldk22lfjpe5qre4mv9ej0nls7unvvbro.apps.googleusercontent.com';
