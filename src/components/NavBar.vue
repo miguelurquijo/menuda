@@ -62,6 +62,7 @@ export default {
     padding-left: 32px;
     padding-right: 32px;
 
+
 }
 
 .navbar1 {

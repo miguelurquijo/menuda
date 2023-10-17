@@ -17,118 +17,115 @@
             </svg>
         </div>
     </header>
-
-    <!-- LIST OF TRANSACTIONS -->
-    <p class="date-grouper">Today</p>
-    <div class="card">
-        <div class="column image-column">
-            <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="19" cy="19" r="18.5" fill="white" stroke="#5350F6"/>
-            </svg>
-        </div>
-        <div class="column text-column">
-            <div class="row">
-                <h2>Pergamino</h2>
-            </div>
-            <div class="row">
-                <p>Fun</p>
-            </div>
-        </div>
-            <div class="column bold-text-column">
-                <strong>$36,000</strong>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="column image-column">
-            <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="19" cy="19" r="18.5" fill="white" stroke="#5350F6"/>
-            </svg>
-        </div>
-        <div class="column text-column">
-            <div class="row">
-                <h2>EPM</h2>
-            </div>
-            <div class="row">
-                <p>Utilities</p>
-            </div>
-        </div>
-            <div class="column bold-text-column">
-                <strong>$366,000</strong>
-        </div>
-    </div>
-
-    <p class="date-grouper">May 2</p>
-    <div class="card">
-        <div class="column image-column">
-            <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="19" cy="19" r="18.5" fill="white" stroke="#5350F6"/>
-            </svg>
-        </div>
-        <div class="column text-column">
-            <div class="row">
-                <h2>Cheff Burger</h2>
-            </div>
-            <div class="row">
-                <p>Restaurant</p>
-            </div>
-        </div>
-            <div class="column bold-text-column">
-                <strong>$62,000</strong>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="column image-column">
-            <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="19" cy="19" r="18.5" fill="white" stroke="#5350F6"/>
-            </svg>
-        </div>
-        <div class="column text-column">
-            <div class="row">
-                <h2>Gasolina</h2>
-            </div>
-            <div class="row">
-                <p>Transport</p>
-            </div>
-        </div>
-            <div class="column bold-text-column">
-                <strong>$144,000</strong>
-        </div>
-    </div>
-    <div class="card">
-        <div class="column image-column">
-            <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="19" cy="19" r="18.5" fill="white" stroke="#5350F6"/>
-            </svg>
-        </div>
-        <div class="column text-column">
-            <div class="row">
-                <h2>Cine</h2>
-            </div>
-            <div class="row">
-                <p>Entretaiment</p>
-            </div>
-        </div>
-            <div class="column bold-text-column">
-                <strong>$94,000</strong>
-        </div>
-    </div>
     
+    <!-- LIST OF TRANSACTIONS -->
+    <div>
+        <div v-for="(group, date) in groupedTransactions" :key="date">
+        <!-- Display the date as an h2 with the formatted date -->
+            <h2 class="date-grouper">{{ formatDate(date) }}</h2>
+            <div v-for="(item, index) in group" :key="index">
+                <div class="card">
+                    <div class="column image-column">
+                        <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="19" cy="19" r="18.5" fill="white" stroke="#5350F6"/>
+                        </svg>
+                    </div>
+                    <div class="column text-column">
+                        <div class="row">
+                            <h2>{{ item.properties.Title.title[0].text.content }}</h2>
+                        </div>
+                        <div class="row">
+                            <p>{{ item.properties.Category.rich_text[0].text.content }}</p>
+                        </div>
+                    </div>
+                    <div class="column bold-text-column">
+                        <strong>{{ formatCurrency(item.properties.Value.number) }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <NavBar />
 </template>
 
 
 <script>
-
-import NavBar from '../components/NavBar.vue'
+import NavBar from '../components/NavBar.vue';
+import axios from 'axios';
 
 export default {
     name: 'App',
     components: {
-    NavBar
-    }
-}
+        NavBar,
+    },
+    data() {
+        return {
+            transactions: [],
+            groupedTransactions: {}, // Grouped transactions by date
+        }
+    },
+    computed: {
+    // Group transactions by date
+    groupTransactionsByDate() {
+        const grouped = {};
+        this.transactions.forEach((transaction) => {
+            const date = transaction.properties.Date.date.start;
+            if (!grouped[date]) {
+                grouped[date] = [];
+            }
+            grouped[date].push(transaction);
+        });
+        return grouped;
+    },
+    },
+    watch: {
+        // Update groupedTransactions when transactions change
+        transactions: {
+            handler() {
+                this.groupedTransactions = this.groupTransactionsByDate;
+            },
+            immediate: true,
+        },
+    },  
+    created() {
+        this.loadData();
+    },
+
+    methods: {
+        // Format the date as "Month Day"
+        formatDate(date) {
+            const options = { month: 'long', day: 'numeric' };
+            const formattedDate = new Date(date).toLocaleDateString(undefined, options);
+            return formattedDate;
+        },
+
+        // Format the value as currency without decimals
+        formatCurrency(value) {
+            const formattedValue = new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 0, // Set to 0 to remove decimals
+            }).format(value);
+            return formattedValue;
+        },
+
+        async loadData() {
+            const response = await axios({
+                method: 'post', // Change method to 'get' for a simple query
+                url: 'https://sheltered-tor-40996-f5163a62f67d.herokuapp.com/https://api.notion.com/v1/databases/4c2dc21032f0457f84a7e7797adbfd3c/query',
+                headers: {
+                'Authorization': 'secret_Y1LuHs2RofqlnVplmTN481EBVcL3Eq5UKF2rjMAChFE',
+                'Notion-Version': '2022-06-28',
+                'Content-Type': 'application/json',
+                },
+            });
+        this.transactions = response.data.results
+        console.log(response.data.results)
+    },
+    },
+};
+
 </script>
 
 <style>
