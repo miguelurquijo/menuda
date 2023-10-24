@@ -135,7 +135,6 @@ export default {
     padding-top: 5px;
     color: #5350F6;
     text-decoration: none;
-    stroke: #5350F6;
     fill: #5350F6;
 }
 
