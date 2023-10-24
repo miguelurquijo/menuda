@@ -4,6 +4,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import HelloWorld from "../components/HelloWorld.vue";
 import Transactions from "../views/Transactions.vue";
+import Dashboard from "../views/Dashboard.vue";
 
 const routes = [
     {
@@ -16,6 +17,11 @@ const routes = [
         name: "Transactions",
         component: Transactions
     },
+    {
+        path: "/dashboard",
+        name: "Dashboard",
+        component: Dashboard
+    }
 ];
 
 const router = createRouter({

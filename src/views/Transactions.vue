@@ -121,14 +121,14 @@ export default {
                 },
             });
         this.transactions = response.data.results
-        console.log(response.data.results)
-    },
+        },
     },
 };
 
 </script>
 
 <style>
+
 .date-grouper {
     display: flex;
     width: 150px;

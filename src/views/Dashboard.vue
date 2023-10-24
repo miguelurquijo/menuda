@@ -1,0 +1,26 @@
+<template>
+    <!-- HEADER -->
+    <header class="header">
+        <div class="text-section">
+            <span class="text">Dashboard</span>
+        </div>
+        <div class="logo-section">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 1V19" stroke="#5350F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M1 10H19" stroke="#5350F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+        <div class="logo-section">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 17C13.4183 17 17 13.4183 17 9C17 4.58172 13.4183 1 9 1C4.58172 1 1 4.58172 1 9C1 13.4183 4.58172 17 9 17Z" stroke="#5350F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M19 19L14.65 14.65" stroke="#5350F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+    </header>
+</template>
+
+<script>
+export default {
+    name: 'App'
+}
+</script>
