@@ -5,6 +5,8 @@ import { createRouter, createWebHistory } from "vue-router";
 import HelloWorld from "../components/HelloWorld.vue";
 import Transactions from "../views/Transactions.vue";
 import Dashboard from "../views/Dashboard.vue";
+import AddTransaction from "../views/AddTransaction.vue";
+
 
 const routes = [
     {
@@ -21,6 +23,11 @@ const routes = [
         path: "/dashboard",
         name: "Dashboard",
         component: Dashboard
+    },
+    {
+        path: "/transaction",
+        name: "AddTransaction",
+        component: AddTransaction
     }
 ];
 
