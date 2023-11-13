@@ -18,12 +18,12 @@
     <div>
         <form @submit.prevent="submitForm">
             <div class="form-group">
-                <label for="title">Title</label>
+                <label class="form-label" for="title">Title</label>
                 <input type="text" id="title" v-model="formData.title" required>
             </div>
 
             <div class="form-group">
-                <label>Category</label>
+                <label class="form-label">Category</label>
                 <div class="category-buttons">
                     <button
                         v-for="category in categories"
@@ -35,17 +35,17 @@
             </div>
 
             <div class="form-group">
-                <label for="value">Value</label>
+                <label class="form-label" for="value">Value</label>
                 <input type="number" id="value" inputmode="numeric" v-model="formData.value" required>
             </div>
 
             <div class="form-group">
-                <label for="date">Date</label>
-                <input type="date" id="date" v-model="formData.date" required>
+                <label class="form-label" for="date">Date</label>
+                <input class="date-input" type="date" id="date" v-model="formData.date" required>
             </div>
 
             <div class="form-group">
-                <label for="user">User</label>
+                <label class="form-label" for="user">User</label>
                 <select id="user" v-model="formData.user" required>
                     <option value="miguelurquijo25@gmail.com">Miguel Urquijo</option>
                     <option value="valenhenao23@gmail.com">Valentina Henao</option>
@@ -55,17 +55,6 @@
             <button type="submit">Submit</button>
         </form>
     </div>
-
-    <!-- FLOATING CATEGORY ICON.  -->
-    <!-- <div class="container">
-        <svg xmlns="http://www.w3.org/2000/svg" width="62" height="62" viewBox="0 0 62 62" fill="none">
-            <circle cx="31" cy="31" r="30" fill="white" stroke="#5350F6" stroke-width="2"/>
-        </svg>
-        <h3 style="text-align: center;">Rent</h3>
-    </div> -->
-
-
-
 </template>
     
 <script>
@@ -96,15 +85,82 @@ export default {
         };
     },
     methods: {
-        submitForm() {
-      // You can handle form submission here, e.g., send the data to a server.
-        console.log("hola");
+        async submitForm() {
+            // API request using fetch
+            const apiUrl = 'https://sheltered-tor-40996-f5163a62f67d.herokuapp.com/https://api.notion.com/v1/pages';
+            const notionSecret = 'secret_Y1LuHs2RofqlnVplmTN481EBVcL3Eq5UKF2rjMAChFE';
+            const requestData = {
+                parent: {
+                database_id: '4c2dc21032f0457f84a7e7797adbfd3c',
+                },
+                properties: {
+                    Title: {
+                        title: [
+                        {
+                            text: {
+                            content: this.formData.title,
+                            },
+                        },
+                        ],
+                    },
+                    Value: {
+                        number: this.formData.value,
+                    },
+                    Category: {
+                        rich_text: [
+                        {
+                            text: {
+                            content: this.formData.category,
+                            },
+                        },
+                        ],
+                    },
+                    Date: {
+                        date: {
+                        start: this.formData.date,
+                        },
+                    },
+                    User: {
+                        rich_text: [
+                            {
+                                text: {
+                                content: this.formData.user,
+                                }
+                            }
+                        ]
+                    }
+                },
+            };
+            try {
+                const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${notionSecret}`,
+                    'Content-Type': 'application/json',
+                    'Notion-Version': '2021-08-16',
+                    // Add any other headers as needed
+                },
+                body: JSON.stringify(requestData),
+                });
+
+                const responseData = await response.json();
+                console.log('Notion API response:', responseData);
+
+                // Redirect to /transactions
+                this.$router.push('/transactions');
+
+                // Handle the response as needed
+            } catch (error) {
+                console.error('Error submitting data to Notion API:', error);
+                // Handle errors
+            }
         },
+
         selectCategory(category) {
             this.formData.category = category;
-            console.log(this.category);
+            console.log(category);
+        },
     },
-    }
 }
 </script>
 
@@ -138,45 +194,61 @@ export default {
 }
 
 .currency-container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .svg-icon {
-  cursor: pointer;
+    cursor: pointer;
 }
 
 .left-icon {
-  margin-right: 32px;
+    margin-right: 32px;
 }
 
 .right-icon {
-  margin-left: 32px;
+    margin-left: 32px;
 }
 
 .currency-input {
-  text-align: center;
+    text-align: center;
 }
 
 .form-group {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 32px;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 32px;
 }
 
 label {
-  margin-bottom: 5px;
+    margin-bottom: 5px;
 }
 
 input[type="text"],
 input[type="number"],
 select,
 input[type="date"] {
-  padding: 5px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  margin-left: 32px;
-  margin-right: 32px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-left: 32px;
+    margin-right: 32px;
+}
+
+.date-input {
+    width: 311px;
+    height: 54px;
+    flex-shrink: 0;
+    border-radius: 7px;
+    border: 1px solid #E5E5E5;
+    background: #FFF;
+}
+
+.form-label {
+    width: 80px; /* Adjust the width as needed */
+    margin-left: 32px;
+    margin-bottom: 8px;
+    text-align: left;
 }
 </style>
