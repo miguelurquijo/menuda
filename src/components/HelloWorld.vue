@@ -8,17 +8,25 @@
     <button :disabled="!Vue3GoogleOauth.isInit || Vue3GoogleOauth.isAuthorized" @click="handleSignIn">Sign in</button>
     <button :disabled="!Vue3GoogleOauth.isAuthorized" @click="handleSignOut" >Sign out</button>
   </div>
+  <NavBar />
+
 </template>
 
 
 <script>
 import { inject } from 'vue';
+import NavBar from '../components/NavBar.vue';
+
 
 export default {
   name: 'HelloWorld',
+  components: {
+        NavBar
+    },
   props: {
     msg: String
   },
+
 
 data() {
     return {

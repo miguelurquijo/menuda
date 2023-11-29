@@ -25,11 +25,11 @@
             <div class="form-group">
                 <label class="form-label">Category</label>
                 <div class="category-buttons">
-                    <button
+                    <button class="buttons-chips"
                         v-for="category in categories"
                         :key="category"
                         @click="selectCategory(category)"
-                        :class="{ 'selected': formData.category === category }"
+                        :class="{ 'selected': formData.category === category, 'clicked': formData.category === category }"
                     >{{ category }}</button>
                 </div>
             </div>
@@ -64,23 +64,23 @@ export default {
         return {
             formData: {
                 title: '',
-                category: 'Arriendo',
+                category: 'Restaurantes',
                 value: null,
                 date: new Date().toISOString().substr(0, 10),
                 user: '',
             },
             categories: [
-                'Arriendo',
-                'Mercado',
                 'Restaurantes',
-                'Mascotas',
-                'Servicios Publicos',
                 'Entretenimiento',
                 'Transporte',
+                'Mercado',  
+                'Mascotas',
+                'Otros',
+                'Arriendo',
+                'Servicios Publicos',
                 'Gimnasio',
                 'Suscripciones',
                 'Aseo apartamento',
-                'Otros',
             ],
         };
     },
@@ -251,4 +251,24 @@ input[type="date"] {
     margin-bottom: 8px;
     text-align: left;
 }
+
+.category-buttons {
+    margin-left: 32px;
+    margin-right: 32px;
+
+
+}
+.buttons-chips {
+    height: 40px;
+    color: #2c3e50; 
+    transition: background-color 1s; /* Add a transition for a smooth color change */
+    border-radius:32px;
+
+}
+
+.buttons-chips.clicked {
+    background-color: #5350F6; /* Change this to the desired color */
+    color: #fff; /* Change this to the desired text color */
+}
+
 </style>
