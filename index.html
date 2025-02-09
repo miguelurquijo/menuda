@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menuda - Login</title>
+    <!-- Update CSS path -->
+    <link rel="stylesheet" href="frontend/assets/css/styles.css">
+    <link rel="manifest" href="frontend/manifest.json">
+    <meta name="theme-color" content="#ffffff">
+    <!-- Update icon path -->
+    <link rel="apple-touch-icon" href="frontend/assets/icons/icon-192x192.png">
+    <meta name="ngrok-skip-browser-warning" content="true">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+    <div class="container">
+        <div class="login-container">
+            <h1>Welcome to Menuda</h1>
+            <p>Sign in to manage your finances</p>
+            
+            <div id="g_id_onload"
+                data-client_id="347237759908-ad264a71lhmico27u4d5lfc9tmabd9cu.apps.googleusercontent.com"
+                data-context="signin"
+                data-ux_mode="popup"
+                data-callback="handleCredentialResponse"
+                data-auto_prompt="true">
+            </div>
+
+            <div class="g_id_signin"
+                data-type="standard"
+                data-shape="rectangular"
+                data-theme="outline"
+                data-text="signin_with"
+                data-size="large"
+                data-logo_alignment="left">
+            </div>
+        </div>
+    </div>
+    <!-- Update JS paths -->
+    <script src="frontend/js/auth.js"></script>
+    <script src="frontend/js/app.js"></script>
+</body>
+</html>
