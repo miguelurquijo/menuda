@@ -11,20 +11,23 @@
     <!-- Update icon path -->
     <link rel="apple-touch-icon" href="frontend/assets/icons/icon-192x192.png">
     <meta name="ngrok-skip-browser-warning" content="true">
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://accounts.google.com/gsi/client?hl=es" async defer></script>
+
+
 </head>
 <body>
     <div class="container">
         <div class="login-container">
-            <h1>Welcome to Menuda</h1>
-            <p>Sign in to manage your finances</p>
+            <h1>Menuda</h1>
+            <p>Inicia sesión para comenzar</p>
             
             <div id="g_id_onload"
                 data-client_id="347237759908-ad264a71lhmico27u4d5lfc9tmabd9cu.apps.googleusercontent.com"
                 data-context="signin"
                 data-ux_mode="popup"
                 data-callback="handleCredentialResponse"
-                data-auto_prompt="true">
+                data-auto_prompt="true"
+                data-hl="es"> 
             </div>
 
             <div class="g_id_signin"
@@ -33,7 +36,8 @@
                 data-theme="outline"
                 data-text="signin_with"
                 data-size="large"
-                data-logo_alignment="left">
+                data-logo_alignment="left"
+                data-locale="es">
             </div>
         </div>
     </div>

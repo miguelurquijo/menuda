@@ -1,0 +1,71 @@
+.quick-access-container {
+  position: fixed;
+  bottom: 96px; /* Position above navigation menu */
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end; /* Align to the right */
+  gap: 10px;
+}
+
+.quick-access-button {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: #E19BFF;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  position: relative; /* Add this */
+}
+
+.quick-access-button.active {
+  background-color: #6400B9;
+}
+
+.quick-access-icon {
+  color: white;
+  font-size: 24px;
+  line-height: 1; /* Add this */
+  position: absolute; /* Add this */
+  top: 50%; /* Add this */
+  left: 50%; /* Add this */
+  transform: translate(-50%, -50%); /* Add this */
+  transition: transform 0.3s ease;
+}
+
+.quick-access-button.active .quick-access-icon {
+  transform: translate(-50%, -50%) rotate(45deg); /* Modify this */
+}
+
+.quick-access-menu {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-end; /* Align to the right */
+}
+
+.quick-access-menu.visible {
+  display: flex;
+}
+
+.quick-access-option {
+  padding: 8px 16px;
+  background-color: white;
+  border: 2px solid #E19BFF;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  transition: all 0.3s ease;
+}
+
+.quick-access-option:hover {
+  background-color: #E19BFF;
+  color: white;
+}
