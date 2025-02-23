@@ -1,0 +1,74 @@
+/* Transactions page styles */
+.transactions-page {
+    padding: 1rem;
+    margin-bottom: 60px; /* Space for navigation menu */
+}
+
+.page-header {
+    margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+}
+
+.transactions-list {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.transactions-loader {
+    text-align: center;
+    padding: 2rem;
+    display: none;
+}
+
+.transactions-error {
+    color: var(--error-color);
+    padding: 1rem;
+    text-align: center;
+    display: none;
+}
+
+.transactions-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.transactions-table th,
+.transactions-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.transactions-table th {
+    background-color: var(--background-secondary);
+    font-weight: 600;
+}
+
+.transactions-table tbody tr:hover {
+    background-color: var(--background-hover);
+}
+
+.amount-positive {
+    color: var(--success-color);
+}
+
+.amount-negative {
+    color: var(--error-color);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .transactions-table {
+        font-size: 0.875rem;
+    }
+    
+    .transactions-table th,
+    .transactions-table td {
+        padding: 0.5rem;
+    }
+}
