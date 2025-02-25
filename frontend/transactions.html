@@ -9,9 +9,6 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ffffff">
 
-    <!-- Update icon path -->
-    <link rel="apple-touch-icon" href="assets/icons/icon-192x192.png">
-
     <!-- navigation menu styles-->
     <link rel="stylesheet" href="./assets/css/navigation-menu.css">
     
@@ -22,32 +19,15 @@
     <link rel="stylesheet" href="./assets/css/transactions.css">
 </head>
 <body>
-    <!--Transactions rows-->
-    <main class="transactions-page">
-        <header class="page-header">
-            <h1>Transactions</h1>
-        </header>
-        
-        <section class="transactions-list" data-lh-id="transactions-list">
-            <div class="transactions-loader" id="transactionsLoader">Loading...</div>
-            <div class="transactions-error" id="transactionsError"></div>
-            <table class="transactions-table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Amount</th>
-                        <th>Category</th>
-                        <th>Vendor</th>
-                        <th>Date</th>
-                    </tr>
-                </thead>
-                <tbody id="transactionsTableBody">
-                    <!-- Transactions will be inserted here -->
-                </tbody>
-            </table>
+
+    <main>
+        <section class="transactions-section">
+            <div id="transactions-container" class="transactions-container">
+                <!-- Transactions will be loaded here -->
+                <p class="loading">Loading transactions...</p>
+            </div>
         </section>
-    </main>
-    
+        
     <!-- NAVIGATION MENU-->
     <div id="nav-placeholder"></div>
     <script type="module" src="./js/components/loadComponents.js"></script>

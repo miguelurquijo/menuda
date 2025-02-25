@@ -5,9 +5,7 @@ const urlsToCache = [
     '/frontend/home.html',
     '/frontend/assets/css/styles.css',
     '/frontend/js/auth.js',
-    '/frontend/js/app.js',
-    '/frontend/assets/icons/icon-192x192.png',
-    '/frontend/assets/icons/icon-512x512.png'
+    '/frontend/js/app.js'
 ];
 
 self.addEventListener('install', event => {
