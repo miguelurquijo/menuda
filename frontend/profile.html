@@ -23,11 +23,6 @@
         </div>
     </div>
     
-    <!-- NAVIGATION MENU-->
-    <div id="nav-placeholder"></div>
-    <script type="module" src="./js/components/loadComponents.js"></script>
-
-    
     <!--AUTH SCRIPT-->
     <script>
         window.addEventListener('DOMContentLoaded', () => {
@@ -41,5 +36,16 @@
     </script>
     <!-- Update app.js path -->
     <script src="frontend/js/app.js"></script>
+
+    <!-- MASA WEB CHAT -->
+    <script src="https://storage.fitbank-ai.com/js/fitbank-js/latest/fitbank.js"></script>
+    <script>
+    window.addEventListener('load', function () {
+        var configChat = {
+            apiKey: 'b52300f3-ccff-4fef-af9b-ca02b5cfd06b'
+        }
+        window.fitbank.webchatConversationsUiLoad(configChat)
+    })
+    </script>
 </body>
 </html>

@@ -6,6 +6,8 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 from routes.users import users_bp
 from routes.transactions import transactions_bp
+from routes.vendors import vendors_bp
+from routes.categories import categories_bp
 
 # Load environment variables
 load_dotenv()
@@ -30,6 +32,8 @@ def create_app():
     # Register blueprints
     app.register_blueprint(users_bp, url_prefix='/api')
     app.register_blueprint(transactions_bp, url_prefix='/api')
+    app.register_blueprint(vendors_bp, url_prefix='/api')  # Make sure this line is present
+    app.register_blueprint(categories_bp, url_prefix='/api')
     
     @app.route('/api/health', methods=['GET'])
     def health_check():

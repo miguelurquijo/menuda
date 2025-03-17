@@ -81,7 +81,27 @@ class QuickAccessComponent {
      * @param {string} action - The action to perform
      */
     handleOptionClick(action) {
-        console.log(`Quick access option clicked: ${action}`);
+        switch (action) {
+            case 'audio':
+                // Handle audio recording
+                console.log('Audio recording action');
+                // Future implementation: Open audio recording interface
+                break;
+                
+            case 'photo':
+                // Handle photo capture
+                console.log('Photo capture action');
+                // Future implementation: Open camera interface
+                break;
+                
+            case 'formulario':
+                // Navigate to transaction form
+                window.location.href = 'transaction-detail.html';
+                break;
+                
+            default:
+                console.log('Unknown action:', action);
+        }
         this.toggleMenu();
     }
 }

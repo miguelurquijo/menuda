@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Update CSS path -->
+    <link rel="stylesheet" href=".assets/css/styles.css">
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ffffff">
+
+    <!-- navigation menu styles-->
+    <link rel="stylesheet" href="./assets/css/navigation-menu.css">
+    
+    <!-- Quick Access styles-->
+    <link rel="stylesheet" href="./assets/css/quick-access.css">
+
+    <!-- Transaction details styles-->
+    <link rel="stylesheet" href="./assets/css/transaction-detail.css">
+    
+
+</head>
+<body>
+<header class="app-header">
+        <div class="header-content">
+            <button id="back-button" class="back-button" data-lh-id="back-button">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <h1 id="page-title">Transaction Detail</h1>
+        </div>
+    </header>
+
+    <main class="container">
+        <form id="transaction-form" class="transaction-form">
+            <input type="hidden" id="transaction-id" name="transaction_id">
+            
+            <div class="form-group">
+                <label for="title">Title</label>
+                <input type="text" id="title" name="title" required data-lh-id="transaction-title">
+            </div>
+            
+            <div class="form-group">
+                <label for="amount">Amount</label>
+                <div class="amount-input-wrapper">
+                    <span class="currency-symbol">$</span>
+                    <input type="number" id="amount" name="amount" step="0.01" required data-lh-id="transaction-amount">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="transaction-date">Date</label>
+                <input type="date" id="transaction-date" name="transaction_date" required data-lh-id="transaction-date">
+            </div>
+            
+            <div class="form-group">
+                <label for="category">Category</label>
+                <div class="select-wrapper">
+                    <select id="category" name="category_id" required data-lh-id="transaction-category">
+                        <option value="">Select a category</option>
+                        <!-- Categories will be populated via JavaScript -->
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="new-category">New Category</label>
+                <input type="text" id="new-category" name="new_category" placeholder="Enter new category name" data-lh-id="transaction-new-category">
+                <small>Leave empty if selecting from existing categories</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="vendor">Vendor</label>
+                <div class="select-wrapper">
+                    <select id="vendor" name="vendor_id" required data-lh-id="transaction-vendor">
+                        <option value="">Select a vendor</option>
+                        <!-- Vendors will be populated via JavaScript -->
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="new-vendor">New Vendor</label>
+                <input type="text" id="new-vendor" name="new_vendor" placeholder="Enter new vendor name" data-lh-id="transaction-new-vendor">
+                <small>Leave empty if selecting from existing vendors</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="attachment">Attachment</label>
+                <div class="attachment-section">
+                    <div id="current-attachment" class="current-attachment hidden">
+                        <div class="attachment-preview">
+                            <img id="attachment-image" src="" alt="Receipt" class="hidden">
+                            <span id="attachment-name" class="attachment-name"></span>
+                        </div>
+                        <button type="button" id="remove-attachment" class="remove-attachment" data-lh-id="remove-attachment">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <input type="file" id="attachment" name="attachment" accept="image/*,.pdf" data-lh-id="transaction-attachment">
+                    <input type="hidden" id="attachment-url" name="attachment_url">
+                    <input type="hidden" id="attachment-type" name="attachment_type">
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" id="save-transaction" class="btn btn-primary" data-lh-id="save-transaction">
+                    Save Transaction
+                </button>
+                <button type="button" id="delete-transaction" class="btn btn-danger hidden" data-lh-id="delete-transaction">
+                    Delete Transaction
+                </button>
+            </div>
+        </form>
+    </main>
+    <div id="toast" class="toast hidden"></div>
+        
+    <!-- NAVIGATION MENU-->
+    <div id="nav-placeholder"></div>
+    <script type="module" src="./js/components/loadComponents.js"></script>
+
+    <!--AUTH SCRIPT-->
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const userProfile = JSON.parse(localStorage.getItem('userProfile'));
+            if (userProfile) {
+                document.getElementById('userName').textContent = userProfile.name;
+            } else {
+                window.location.href = '../index.html';
+            }
+        });
+    </script>
+    <!-- Update app.js path -->
+    <script src="frontend/js/app.js"></script>
+    <script src="./js/transaction-detail.js"></script>
+    
+</body>
+</html>
