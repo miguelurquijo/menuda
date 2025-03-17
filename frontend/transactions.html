@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Menuda - Home</title>
     <!-- Update CSS path -->
-    <link rel="stylesheet" href=".assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/styles.css">
 
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ffffff">
@@ -40,15 +40,13 @@
     <!--AUTH SCRIPT-->
     <script>
         window.addEventListener('DOMContentLoaded', () => {
-            const userProfile = JSON.parse(localStorage.getItem('userProfile'));
-            if (userProfile) {
-                document.getElementById('userName').textContent = userProfile.name;
-            } else {
+            const userProfile = localStorage.getItem('userProfile');
+            if (!userProfile) {
                 window.location.href = '../index.html';
             }
         });
     </script>
     <!-- Update app.js path -->
-    <script src="frontend/js/app.js"></script>
+    <script src="./js/app.js"></script>
 </body>
 </html>

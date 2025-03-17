@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Menuda - Home</title>
-    <!-- Update CSS path -->
-    <link rel="stylesheet" href="assets/css/styles.css">
+    <title>Menuda - Perfil</title>
+    <!-- Fixed CSS path -->
+    <link rel="stylesheet" href="./assets/css/styles.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ffffff">
 
@@ -23,19 +23,21 @@
         </div>
     </div>
     
+    <!-- NAVIGATION MENU-->
+    <div id="nav-placeholder"></div>
+    <script type="module" src="./js/components/loadComponents.js"></script>
+    
     <!--AUTH SCRIPT-->
     <script>
         window.addEventListener('DOMContentLoaded', () => {
-            const userProfile = JSON.parse(localStorage.getItem('userProfile'));
-            if (userProfile) {
-                document.getElementById('userName').textContent = userProfile.name;
-            } else {
+            const userProfile = localStorage.getItem('userProfile');
+            if (!userProfile) {
                 window.location.href = '../index.html';
             }
         });
     </script>
-    <!-- Update app.js path -->
-    <script src="frontend/js/app.js"></script>
+    <!-- Fixed app.js path -->
+    <script src="./js/app.js"></script>
 
     <!-- MASA WEB CHAT -->
     <script src="https://storage.fitbank-ai.com/js/fitbank-js/latest/fitbank.js"></script>
