@@ -4,7 +4,6 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    
     // Initialize components
     initPage();
 });
@@ -88,34 +87,37 @@ function initPage() {
         e.preventDefault();
         
         try {
-            // Validate form
-            if (!validateForm()) {
-                return;
-            }
+            // Show loading state
+            showToast('Saving transaction...');
             
-            // Get form data
+            // Get form data directly
             const formData = new FormData(form);
             
-            // Prepare transaction data
+            // Get user profile
+            const userProfile = getUserProfile();
+            if (!userProfile || !userProfile.user_id) {
+                throw new Error('User profile not found');
+            }
+            
+            // Get values directly from form elements
+            const categorySelect = document.getElementById('category');
+            const vendorSelect = document.getElementById('vendor');
+            
+            console.log('Category select value:', categorySelect.value);
+            console.log('Vendor select value:', vendorSelect.value);
+            
+            // Create transaction data directly from form fields
             const transactionData = {
-                user_id: JSON.parse(localStorage.getItem('userProfile')).uuid,
-                transaction_id: formData.get('transaction_id') || null,
+                user_id: userProfile.user_id,
                 title: formData.get('title'),
                 amount: parseFloat(formData.get('amount')),
                 transaction_date: formData.get('transaction_date'),
-                category_id: formData.get('category_id'),
-                vendor_id: formData.get('vendor_id'),
-                new_category: formData.get('new_category'),
-                new_vendor: formData.get('new_vendor'),
-                attachment_url: formData.get('attachment_url') || null,
-                attachment_type: formData.get('attachment_type') || null
+                category_id: formData.get('category_id') || categorySelect.value,
+                vendor_id: formData.get('vendor_id') || vendorSelect.value
             };
             
-            // Handle file upload if present
-            const file = fileInput.files[0];
-            if (file) {
-                await handleFileUpload(file, transactionData);
-            }
+            // For debugging
+            console.log('FINAL TRANSACTION DATA:', transactionData);
             
             // Save transaction
             await saveTransaction(transactionData);
@@ -130,7 +132,7 @@ function initPage() {
             
         } catch (error) {
             console.error('Error saving transaction:', error);
-            showToast('Error saving transaction. Please try again.');
+            showToast('Error: ' + error.message);
         }
     });
     
@@ -148,7 +150,7 @@ function initPage() {
                     }, 1000);
                 } catch (error) {
                     console.error('Error deleting transaction:', error);
-                    showToast('Error deleting transaction. Please try again.');
+                    showToast('Error deleting transaction: ' + error.message);
                 }
             }
         });
@@ -172,26 +174,133 @@ function initPage() {
 }
 
 /**
+ * Get user profile from localStorage
+ * @returns {Object|null} User profile or null if not found
+ */
+function getUserProfile() {
+    const userProfileString = localStorage.getItem('userProfile');
+    return userProfileString ? JSON.parse(userProfileString) : null;
+}
+
+/**
+ * Create a new category
+ * @param {string} userId - The user ID
+ * @param {string} categoryName - The name of the new category
+ * @returns {Promise<Object>} Promise resolving to new category object
+ */
+async function createCategory(userId, categoryName) {
+    try {
+        console.log('Creating category with:', { userId, categoryName });
+        
+        const payload = {
+            user_id: userId,
+            category_name: categoryName
+        };
+        
+        console.log('Category creation payload:', payload);
+        
+        const response = await fetch('http://localhost:5000/api/categories', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        // Get response as text first for debugging
+        const responseText = await response.text();
+        console.log('Category creation raw response:', responseText);
+        
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Failed to parse category response as JSON:', e);
+            throw new Error(`Invalid response from server: ${responseText}`);
+        }
+        
+        if (!response.ok) {
+            throw new Error(result.message || `Failed to create category (${response.status})`);
+        }
+        
+        if (result.status !== 'success') {
+            throw new Error(result.message || 'Failed to create category');
+        }
+        
+        return result.data;
+    } catch (error) {
+        console.error('Error creating category:', error);
+        throw error;
+    }
+}
+
+/**
+ * Create a new vendor
+ * @param {string} userId - The user ID
+ * @param {string} vendorName - The name of the new vendor
+ * @param {string} categoryId - The category ID for the vendor
+ * @returns {Promise<Object>} Promise resolving to new vendor object
+ */
+async function createVendor(userId, vendorName, categoryId) {
+    try {
+        console.log('Creating vendor with:', { userId, vendorName, categoryId });
+        
+        const payload = {
+            user_id: userId,
+            vendor_name: vendorName,
+            category_id: categoryId
+        };
+        
+        console.log('Vendor creation payload:', payload);
+        
+        const response = await fetch('http://localhost:5000/api/vendors', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        // Get response as text first for debugging
+        const responseText = await response.text();
+        console.log('Vendor creation raw response:', responseText);
+        
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Failed to parse vendor response as JSON:', e);
+            throw new Error(`Invalid response from server: ${responseText}`);
+        }
+        
+        if (!response.ok) {
+            throw new Error(result.message || `Failed to create vendor (${response.status})`);
+        }
+        
+        if (result.status !== 'success') {
+            throw new Error(result.message || 'Failed to create vendor');
+        }
+        
+        return result.data;
+    } catch (error) {
+        console.error('Error creating vendor:', error);
+        throw error;
+    }
+}
+
+/**
  * Load categories from API
  */
 function loadCategories() {
     try {
         // Get user profile from localStorage
-        const userProfileString = localStorage.getItem('userProfile');
-        let userId;
-        
-        if (userProfileString) {
-            const userProfile = JSON.parse(userProfileString);
-            // Look for user_id instead of uuid
-            userId = userProfile.user_id;
-            console.log('Using user_id from profile:', userId);
-        }
-        
-        if (!userId) {
+        const userProfile = getUserProfile();
+        if (!userProfile || !userProfile.user_id) {
             console.warn('User ID not found in profile');
-            // Use a default for testing or handle this case appropriately
             return;
         }
+        
+        const userId = userProfile.user_id;
         
         // Now make the API call with the correct userId
         fetch(`http://localhost:5000/api/categories?user_id=${userId}`)
@@ -227,6 +336,7 @@ function loadCategories() {
             })
             .catch(error => {
                 console.error('Error loading categories:', error);
+                showToast('Error loading categories');
             });
     } catch (error) {
         console.error('Error in loadCategories function:', error);
@@ -239,21 +349,13 @@ function loadCategories() {
 async function loadVendors() {
     try {
         // Get user profile from localStorage
-        const userProfileString = localStorage.getItem('userProfile');
-        let userId;
-        
-        if (userProfileString) {
-            const userProfile = JSON.parse(userProfileString);
-            // Look for user_id instead of uuid
-            userId = userProfile.user_id;
-            console.log('Using user_id from profile:', userId);
-        }
-        
-        if (!userId) {
+        const userProfile = getUserProfile();
+        if (!userProfile || !userProfile.user_id) {
             console.warn('User ID not found in profile');
-            // Use a default for testing or handle this case appropriately
             return;
         }
+        
+        const userId = userProfile.user_id;
         
         // Now make the API call with the correct userId
         fetch(`http://localhost:5000/api/vendors?user_id=${userId}`)
@@ -272,11 +374,12 @@ async function loadVendors() {
                         vendorSelect.remove(1);
                     }
                     
-                    // Add categories
+                    // Add vendors
                     data.data.forEach(vendor => {
                         const option = document.createElement('option');
                         option.value = vendor.vendor_id;
                         option.textContent = vendor.vendor_name;
+                        option.dataset.categoryId = vendor.category_id;
                         vendorSelect.appendChild(option);
                     });
                     
@@ -288,10 +391,11 @@ async function loadVendors() {
                 }
             })
             .catch(error => {
-                console.error('Error loading categories:', error);
+                console.error('Error loading vendors:', error);
+                showToast('Error loading vendors');
             });
     } catch (error) {
-        console.error('Error in loadCategories function:', error);
+        console.error('Error in loadVendors function:', error);
     }
 }
 
@@ -301,50 +405,66 @@ async function loadVendors() {
  */
 async function loadTransaction(transactionId) {
     try {
-        const userId = JSON.parse(localStorage.getItem('userProfile')).uuid;
-        const response = await fetch(`/api/transactions/${transactionId}?user_id=${userId}`);
+        const userProfile = getUserProfile();
+        if (!userProfile || !userProfile.user_id) {
+            throw new Error('User profile not found');
+        }
+        
+        const userId = userProfile.user_id;
+        const response = await fetch(`http://localhost:5000/api/transactions?user_id=${userId}`);
         
         if (!response.ok) {
-            throw new Error('Failed to load transaction');
+            throw new Error(`Failed to load transactions (${response.status})`);
         }
         
         const data = await response.json();
         
-        if (data.status === 'success') {
-            const transaction = data.data;
+        if (data.status !== 'success') {
+            throw new Error(data.message || 'Failed to load transactions');
+        }
+        
+        // Find the transaction by ID
+        const transaction = data.data.find(t => t.transaction_id === transactionId);
+        
+        if (!transaction) {
+            throw new Error('Transaction not found');
+        }
+        
+        // Fill form fields
+        document.getElementById('title').value = transaction.title;
+        document.getElementById('amount').value = transaction.amount;
+        
+        // Format date properly
+        const date = new Date(transaction.transaction_date);
+        const formattedDate = date.toISOString().split('T')[0];
+        document.getElementById('transaction-date').value = formattedDate;
+        
+        // Set category and vendor (after a delay to ensure they're loaded)
+        setTimeout(() => {
+            document.getElementById('category').value = transaction.category_id;
+            document.getElementById('vendor').value = transaction.vendor_id;
+        }, 500);
+        
+        // Handle attachment if present
+        if (transaction.attachment_url) {
+            document.getElementById('attachment-url').value = transaction.attachment_url;
+            document.getElementById('attachment-type').value = transaction.attachment_type;
+            document.getElementById('attachment-name').textContent = transaction.attachment_url.split('/').pop();
             
-            // Fill form fields
-            document.getElementById('title').value = transaction.title;
-            document.getElementById('amount').value = transaction.amount;
-            document.getElementById('transaction-date').value = new Date(transaction.transaction_date).toISOString().split('T')[0];
+            // Show attachment preview
+            const currentAttachment = document.getElementById('current-attachment');
+            currentAttachment.classList.remove('hidden');
             
-            // Wait for categories and vendors to load before setting values
-            setTimeout(() => {
-                document.getElementById('category').value = transaction.category_id;
-                document.getElementById('vendor').value = transaction.vendor_id;
-            }, 500);
-            
-            // Handle attachment if present
-            if (transaction.attachment_url) {
-                document.getElementById('attachment-url').value = transaction.attachment_url;
-                document.getElementById('attachment-type').value = transaction.attachment_type;
-                document.getElementById('attachment-name').textContent = transaction.attachment_url.split('/').pop();
-                
-                // Show attachment preview
-                const currentAttachment = document.getElementById('current-attachment');
-                currentAttachment.classList.remove('hidden');
-                
-                // If it's an image, show the preview
-                if (transaction.attachment_type === 'image') {
-                    const attachmentImage = document.getElementById('attachment-image');
-                    attachmentImage.src = transaction.attachment_url;
-                    attachmentImage.classList.remove('hidden');
-                }
+            // If it's an image, show the preview
+            if (transaction.attachment_type === 'image') {
+                const attachmentImage = document.getElementById('attachment-image');
+                attachmentImage.src = transaction.attachment_url;
+                attachmentImage.classList.remove('hidden');
             }
         }
     } catch (error) {
         console.error('Error loading transaction:', error);
-        showToast('Error loading transaction details');
+        showToast('Error loading transaction details: ' + error.message);
     }
 }
 
@@ -353,24 +473,98 @@ async function loadTransaction(transactionId) {
  * @param {Object} transactionData - The transaction data to save
  */
 async function saveTransaction(transactionData) {
-    const isUpdate = !!transactionData.transaction_id;
-    const url = isUpdate ? `/api/transactions/${transactionData.transaction_id}` : '/api/transactions';
-    const method = isUpdate ? 'PUT' : 'POST';
-    
-    const response = await fetch(url, {
-        method: method,
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(transactionData)
-    });
-    
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to save transaction');
+    try {
+        // Make sure vendor_id is included
+        if (!transactionData.vendor_id) {
+            // Get it directly from the select element as a last resort
+            const vendorSelect = document.getElementById('vendor');
+            if (vendorSelect && vendorSelect.value) {
+                transactionData.vendor_id = vendorSelect.value;
+                console.log('Added vendor_id from select element:', transactionData.vendor_id);
+            } else {
+                throw new Error('Vendor ID is required but could not be determined');
+            }
+        }
+        
+        // Double-check all required fields
+        const requiredFields = ['user_id', 'title', 'amount', 'transaction_date', 'category_id', 'vendor_id'];
+        for (const field of requiredFields) {
+            if (!transactionData[field]) {
+                throw new Error(`Missing required field: ${field}`);
+            }
+        }
+        
+        const isUpdate = !!transactionData.transaction_id;
+        const url = isUpdate 
+            ? `http://localhost:5000/api/transactions/${transactionData.transaction_id}` 
+            : 'http://localhost:5000/api/transactions';
+        const method = isUpdate ? 'PUT' : 'POST';
+        
+        // Format transaction date if needed
+        if (transactionData.transaction_date) {
+            // Ensure date is in the format expected by the server (YYYY-MM-DD)
+            const dateObj = new Date(transactionData.transaction_date);
+            if (!isNaN(dateObj.getTime())) {
+                transactionData.transaction_date = dateObj.toISOString().split('T')[0];
+            }
+        }
+        
+        // Create final payload with default values for nullable fields
+        const payload = {
+            user_id: transactionData.user_id,
+            title: transactionData.title,
+            amount: transactionData.amount,
+            transaction_date: transactionData.transaction_date,
+            category_id: transactionData.category_id,
+            vendor_id: transactionData.vendor_id,
+            attachment_url: transactionData.attachment_url || '', // Empty string instead of null
+            attachment_type: transactionData.attachment_type || 'none' // 'none' instead of null
+        };
+        
+        if (transactionData.transaction_id) {
+            payload.transaction_id = transactionData.transaction_id;
+        }
+        
+        // Log the final payload being sent to the server
+        console.log('Sending transaction payload:', payload);
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        // Get the response as text first to see what's coming back
+        const responseText = await response.text();
+        console.log('Server response:', responseText);
+        
+        // If the response was not ok, try to parse it as JSON if possible
+        if (!response.ok) {
+            let errorMessage;
+            try {
+                const errorData = JSON.parse(responseText);
+                errorMessage = errorData.message || `Server responded with status: ${response.status}`;
+            } catch (e) {
+                // If it can't be parsed as JSON, use the text directly
+                errorMessage = responseText || `Server responded with status: ${response.status}`;
+            }
+            throw new Error(errorMessage);
+        }
+        
+        // Parse the successful response as JSON
+        const result = responseText ? JSON.parse(responseText) : {};
+        
+        if (result.status !== 'success') {
+            throw new Error(result.message || 'Failed to save transaction');
+        }
+        
+        return result;
+    } catch (error) {
+        console.error('Error saving transaction:', error);
+        throw error;
     }
-    
-    return await response.json();
 }
 
 /**
@@ -378,17 +572,33 @@ async function saveTransaction(transactionData) {
  * @param {string} transactionId - The ID of the transaction to delete
  */
 async function deleteTransaction(transactionId) {
-    const userId = JSON.parse(localStorage.getItem('userProfile')).uuid;
-    const response = await fetch(`/api/transactions/${transactionId}?user_id=${userId}`, {
-        method: 'DELETE'
-    });
-    
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete transaction');
+    try {
+        const userProfile = getUserProfile();
+        if (!userProfile || !userProfile.user_id) {
+            throw new Error('User profile not found');
+        }
+        
+        const userId = userProfile.user_id;
+        const response = await fetch(`http://localhost:5000/api/transactions/${transactionId}?user_id=${userId}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `Failed to delete transaction (${response.status})`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.status !== 'success') {
+            throw new Error(result.message || 'Failed to delete transaction');
+        }
+        
+        return result;
+    } catch (error) {
+        console.error('Error deleting transaction:', error);
+        throw error;
     }
-    
-    return await response.json();
 }
 
 /**
@@ -438,6 +648,8 @@ async function handleFileUpload(file, transactionData) {
         attachmentType = 'image';
     } else if (file.type === 'application/pdf') {
         attachmentType = 'pdf';
+    } else if (file.type.startsWith('audio/')) {
+        attachmentType = 'audio';
     }
     
     // In a real implementation, this would be the URL returned from the server
@@ -456,12 +668,39 @@ async function handleFileUpload(file, transactionData) {
  * @returns {boolean} True if form is valid
  */
 function validateForm() {
+    const title = document.getElementById('title').value.trim();
+    const amount = document.getElementById('amount').value;
+    const transactionDate = document.getElementById('transaction-date').value;
     const categorySelect = document.getElementById('category');
     const vendorSelect = document.getElementById('vendor');
     const newCategoryInput = document.getElementById('new-category');
     const newVendorInput = document.getElementById('new-vendor');
     
+    // Validate title
+    if (!title) {
+        showToast('Please enter a title');
+        return false;
+    }
+    
+    // Validate amount
+    if (!amount || isNaN(parseFloat(amount))) {
+        showToast('Please enter a valid amount');
+        return false;
+    }
+    
+    // Validate date
+    if (!transactionDate) {
+        showToast('Please select a date');
+        return false;
+    }
+    
     // Validate category
+    if (!categorySelect.value) {
+        showToast('Please select a category');
+        return false;
+    }
+    
+    // Validate new category if selected
     if (categorySelect.value === 'new' && !newCategoryInput.value.trim()) {
         showToast('Please enter a category name');
         newCategoryInput.focus();
@@ -469,6 +708,12 @@ function validateForm() {
     }
     
     // Validate vendor
+    if (!vendorSelect.value) {
+        showToast('Please select a vendor');
+        return false;
+    }
+    
+    // Validate new vendor if selected
     if (vendorSelect.value === 'new' && !newVendorInput.value.trim()) {
         showToast('Please enter a vendor name');
         newVendorInput.focus();
@@ -491,4 +736,54 @@ function showToast(message) {
     setTimeout(() => {
         toast.classList.add('hidden');
     }, 3000);
+}
+
+function debugFormFields() {
+    // Check form element
+    const form = document.getElementById('transaction-form');
+    console.log('Form found:', !!form);
+    
+    // Check category and vendor fields
+    const categorySelect = document.getElementById('category');
+    const vendorSelect = document.getElementById('vendor');
+    
+    console.log('Category select found:', !!categorySelect);
+    console.log('Vendor select found:', !!vendorSelect);
+    
+    if (categorySelect) {
+        console.log('Category select name:', categorySelect.getAttribute('name'));
+        console.log('Category select value:', categorySelect.value);
+        console.log('Category select options count:', categorySelect.options.length);
+    }
+    
+    if (vendorSelect) {
+        console.log('Vendor select name:', vendorSelect.getAttribute('name'));
+        console.log('Vendor select value:', vendorSelect.value);
+        console.log('Vendor select options count:', vendorSelect.options.length);
+    }
+    
+    // Create a test FormData object to check form field names
+    const formData = new FormData(form);
+    
+    console.log('--- Form Data Entries ---');
+    for (let [key, value] of formData.entries()) {
+        console.log(`${key}: ${value}`);
+    }
+    
+    // Check new category/vendor fields
+    const newCategoryInput = document.getElementById('new-category');
+    const newVendorInput = document.getElementById('new-vendor');
+    
+    console.log('New category input found:', !!newCategoryInput);
+    console.log('New vendor input found:', !!newVendorInput);
+    
+    if (newCategoryInput) {
+        console.log('New category input name:', newCategoryInput.getAttribute('name'));
+    }
+    
+    if (newVendorInput) {
+        console.log('New vendor input name:', newVendorInput.getAttribute('name'));
+    }
+    
+    return 'Form debugging complete. Check console for results.';
 }

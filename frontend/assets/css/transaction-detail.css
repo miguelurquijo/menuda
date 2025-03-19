@@ -15,10 +15,17 @@
     left: 0;
     right: 0;
     background-color: var(--primary-color);
-    color: white;
+    color: white !important; /* Force white text color */
     padding: 1rem;
     z-index: 10;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Ensure heading in header is visible */
+.app-header h1 {
+    color: white !important;
+    margin: 0; /* Remove default margin */
+    font-size: 1.25rem; /* Appropriate size for mobile header */
 }
 
 .header-content {

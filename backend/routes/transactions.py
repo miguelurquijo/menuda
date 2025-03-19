@@ -1,5 +1,5 @@
 """
-Transaction-related routes for Menuda Finance API
+Updated transaction-related routes for Menuda Finance API with NULL handling
 """
 from flask import Blueprint, request, jsonify
 from utils.db import get_db_connection, close_connection
@@ -88,10 +88,6 @@ def get_transactions():
         # Clean up resources
         close_connection(connection, cursor)
 
-# Add more transaction endpoints as needed
-# Example: Create transaction, update transaction, delete transaction
-
-# Example of additional endpoint for creating a transaction
 @transactions_bp.route('/transactions', methods=['POST'])
 def create_transaction():
     """
@@ -125,7 +121,7 @@ def create_transaction():
         import uuid
         transaction_id = str(uuid.uuid4())
         
-        # Prepare query
+        # Prepare query - now allowing NULL for attachment fields
         query = """
         INSERT INTO transactions (
             transaction_id, user_id, title, amount, category_id, vendor_id, 
@@ -134,6 +130,10 @@ def create_transaction():
             %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW(), FALSE
         )
         """
+        
+        # Get optional fields with None as default
+        attachment_url = data.get('attachment_url')
+        attachment_type = data.get('attachment_type')
         
         # Execute query
         cursor.execute(query, (
@@ -144,8 +144,8 @@ def create_transaction():
             data['category_id'],
             data['vendor_id'],
             data['transaction_date'],
-            data.get('attachment_url', None),
-            data.get('attachment_type', None)
+            attachment_url,  # Can be None
+            attachment_type  # Can be None
         ))
         
         # Commit changes
@@ -161,7 +161,7 @@ def create_transaction():
         print(f"Error in create_transaction: {e}")
         return jsonify({
             'status': 'error',
-            'message': 'Server error occurred'
+            'message': f'Server error occurred: {str(e)}'
         }), 500
     
     finally:
