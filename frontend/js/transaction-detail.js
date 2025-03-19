@@ -22,6 +22,8 @@ function initPage() {
     const vendorSelect = document.getElementById('vendor');
     const fileInput = document.getElementById('attachment');
     const removeAttachmentBtn = document.getElementById('remove-attachment');
+    const newCategoryGroup = document.getElementById('new-category-group');
+    const newVendorGroup = document.getElementById('new-vendor-group');
     
     // Get transaction ID from URL if editing
     const urlParams = new URLSearchParams(window.location.search);
@@ -53,22 +55,31 @@ function initPage() {
         window.history.back();
     });
     
-    // Toggle category/vendor inputs
+    // Toggle category input visibility
     categorySelect.addEventListener('change', () => {
         if (categorySelect.value === 'new') {
+            newCategoryGroup.classList.remove('hidden');
             newCategoryInput.focus();
             newCategoryInput.setAttribute('required', true);
         } else {
+            newCategoryGroup.classList.add('hidden');
             newCategoryInput.removeAttribute('required');
+            // Clear the input when hiding
+            newCategoryInput.value = '';
         }
     });
     
+    // Toggle vendor input visibility
     vendorSelect.addEventListener('change', () => {
         if (vendorSelect.value === 'new') {
+            newVendorGroup.classList.remove('hidden');
             newVendorInput.focus();
             newVendorInput.setAttribute('required', true);
         } else {
+            newVendorGroup.classList.add('hidden');
             newVendorInput.removeAttribute('required');
+            // Clear the input when hiding
+            newVendorInput.value = '';
         }
     });
     
