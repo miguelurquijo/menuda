@@ -90,7 +90,7 @@ function initPage() {
             // Show loading state
             showToast('Saving transaction...');
             
-            // Get form data directly
+            // Get form data
             const formData = new FormData(form);
             
             // Get user profile
@@ -99,37 +99,61 @@ function initPage() {
                 throw new Error('User profile not found');
             }
             
-            // Get values directly from form elements
-            const categorySelect = document.getElementById('category');
-            const vendorSelect = document.getElementById('vendor');
+            // Get original selected values from the form elements
+            const categorySelectValue = categorySelect.value;
+            const vendorSelectValue = vendorSelect.value;
             
-            console.log('Category select value:', categorySelect.value);
-            console.log('Vendor select value:', vendorSelect.value);
-            
-            // Create transaction data directly from form fields
-            const transactionData = {
+            // Create transaction data with basic info
+            let transactionData = {
                 user_id: userProfile.user_id,
                 title: formData.get('title'),
                 amount: parseFloat(formData.get('amount')),
-                transaction_date: formData.get('transaction_date'),
-                category_id: formData.get('category_id') || categorySelect.value,
-                vendor_id: formData.get('vendor_id') || vendorSelect.value
+                transaction_date: formData.get('transaction_date')
             };
             
-            // For debugging
-            console.log('FINAL TRANSACTION DATA:', transactionData);
+            // Handle new category if selected
+            let categoryId = categorySelectValue;
+            if (categorySelectValue === 'new') {
+                const newCategoryName = newCategoryInput.value.trim();
+                if (!newCategoryName) {
+                    throw new Error('New category name is required');
+                }
+                
+                // Create new category and get the ID
+                const newCategory = await createCategory(userProfile.user_id, newCategoryName);
+                categoryId = newCategory.category_id;
+                console.log('Created new category with ID:', categoryId);
+            }
             
-            // Save transaction
+            // Assign category to transaction data
+            transactionData.category_id = categoryId;
+            
+            // Handle new vendor if selected
+            let vendorId = vendorSelectValue;
+            if (vendorSelectValue === 'new') {
+                const newVendorName = newVendorInput.value.trim();
+                if (!newVendorName) {
+                    throw new Error('New vendor name is required');
+                }
+                
+                // Create new vendor and get the ID
+                // Use the current category ID for the new vendor
+                const newVendor = await createVendor(userProfile.user_id, newVendorName, categoryId);
+                vendorId = newVendor.vendor_id;
+                console.log('Created new vendor with ID:', vendorId);
+            }
+            
+            // Assign vendor to transaction data
+            transactionData.vendor_id = vendorId;
+            
+            // Save transaction with proper IDs
             await saveTransaction(transactionData);
             
-            // Show success message
+            // Show success message and redirect
             showToast('Transaction saved successfully');
-            
-            // Redirect to transactions list after a short delay
             setTimeout(() => {
                 window.location.href = 'transactions.html';
             }, 1000);
-            
         } catch (error) {
             console.error('Error saving transaction:', error);
             showToast('Error: ' + error.message);
