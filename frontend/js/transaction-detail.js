@@ -3,8 +3,35 @@
  * Handles creating, viewing, and editing transaction records
  */
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialize components
+document.addEventListener('DOMContentLoaded', function() {
+    // Check URL parameters for prefill data
+    const urlParams = new URLSearchParams(window.location.search);
+    const isPrefill = urlParams.get('prefill') === 'true';
+    
+    if (isPrefill) {
+        // Try to get invoice data from URL params
+        const title = urlParams.get('title');
+        const amount = urlParams.get('amount');
+        const date = urlParams.get('date');
+        const category = urlParams.get('category');
+        const vendor = urlParams.get('vendor');
+        
+        // Apply data to form fields
+        const titleField = document.getElementById('title');
+        const amountField = document.getElementById('amount');
+        const dateField = document.getElementById('transaction-date');
+        
+        // Set form fields if they exist
+        if (titleField && title) titleField.value = title;
+        if (amountField && amount) amountField.value = amount;
+        if (dateField && date) dateField.value = date;
+        
+        // Store category and vendor for dropdown population
+        window.extractedCategory = category || '';
+        window.extractedVendor = vendor || '';
+    }
+    
+    // Initialize the page
     initPage();
 });
 
@@ -39,10 +66,12 @@ function initPage() {
     } else {
         document.getElementById('page-title').textContent = 'New Transaction';
         
-        // Set default date to today
-        const today = new Date();
-        const formattedDate = today.toISOString().split('T')[0];
-        document.getElementById('transaction-date').value = formattedDate;
+        // Set default date to today if not already set
+        if (!document.getElementById('transaction-date').value) {
+            const today = new Date();
+            const formattedDate = today.toISOString().split('T')[0];
+            document.getElementById('transaction-date').value = formattedDate;
+        }
     }
     
     // Load categories and vendors
@@ -122,7 +151,6 @@ function initPage() {
                 // Create new category and get the ID
                 const newCategory = await createCategory(userProfile.user_id, newCategoryName);
                 categoryId = newCategory.category_id;
-                console.log('Created new category with ID:', categoryId);
             }
             
             // Assign category to transaction data
@@ -140,7 +168,6 @@ function initPage() {
                 // Use the current category ID for the new vendor
                 const newVendor = await createVendor(userProfile.user_id, newVendorName, categoryId);
                 vendorId = newVendor.vendor_id;
-                console.log('Created new vendor with ID:', vendorId);
             }
             
             // Assign vendor to transaction data
@@ -214,14 +241,10 @@ function getUserProfile() {
  */
 async function createCategory(userId, categoryName) {
     try {
-        console.log('Creating category with:', { userId, categoryName });
-        
         const payload = {
             user_id: userId,
             category_name: categoryName
         };
-        
-        console.log('Category creation payload:', payload);
         
         const response = await fetch('http://localhost:5000/api/categories', {
             method: 'POST',
@@ -231,21 +254,11 @@ async function createCategory(userId, categoryName) {
             body: JSON.stringify(payload)
         });
         
-        // Get response as text first for debugging
-        const responseText = await response.text();
-        console.log('Category creation raw response:', responseText);
-        
-        let result;
-        try {
-            result = JSON.parse(responseText);
-        } catch (e) {
-            console.error('Failed to parse category response as JSON:', e);
-            throw new Error(`Invalid response from server: ${responseText}`);
-        }
-        
         if (!response.ok) {
-            throw new Error(result.message || `Failed to create category (${response.status})`);
+            throw new Error(`Failed to create category (${response.status})`);
         }
+        
+        const result = await response.json();
         
         if (result.status !== 'success') {
             throw new Error(result.message || 'Failed to create category');
@@ -267,15 +280,11 @@ async function createCategory(userId, categoryName) {
  */
 async function createVendor(userId, vendorName, categoryId) {
     try {
-        console.log('Creating vendor with:', { userId, vendorName, categoryId });
-        
         const payload = {
             user_id: userId,
             vendor_name: vendorName,
             category_id: categoryId
         };
-        
-        console.log('Vendor creation payload:', payload);
         
         const response = await fetch('http://localhost:5000/api/vendors', {
             method: 'POST',
@@ -285,21 +294,11 @@ async function createVendor(userId, vendorName, categoryId) {
             body: JSON.stringify(payload)
         });
         
-        // Get response as text first for debugging
-        const responseText = await response.text();
-        console.log('Vendor creation raw response:', responseText);
-        
-        let result;
-        try {
-            result = JSON.parse(responseText);
-        } catch (e) {
-            console.error('Failed to parse vendor response as JSON:', e);
-            throw new Error(`Invalid response from server: ${responseText}`);
-        }
-        
         if (!response.ok) {
-            throw new Error(result.message || `Failed to create vendor (${response.status})`);
+            throw new Error(`Failed to create vendor (${response.status})`);
         }
+        
+        const result = await response.json();
         
         if (result.status !== 'success') {
             throw new Error(result.message || 'Failed to create vendor');
@@ -356,6 +355,32 @@ function loadCategories() {
                     newOption.value = 'new';
                     newOption.textContent = '+ Create New Category';
                     categorySelect.appendChild(newOption);
+                    
+                    // Set category from extracted data if available
+                    setTimeout(() => {
+                        if (window.extractedCategory) {
+                            let matchFound = false;
+                            
+                            // Try to find an exact match first
+                            for (let i = 0; i < categorySelect.options.length; i++) {
+                                const option = categorySelect.options[i];
+                                if (option.textContent.toLowerCase() === window.extractedCategory.toLowerCase()) {
+                                    categorySelect.value = option.value;
+                                    matchFound = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (!matchFound) {
+                                // Select "Create New" and fill in the name
+                                categorySelect.value = 'new';
+                                const newCategoryGroup = document.getElementById('new-category-group');
+                                newCategoryGroup.classList.remove('hidden');
+                                document.getElementById('new-category').value = window.extractedCategory;
+                                document.getElementById('new-category').setAttribute('required', true);
+                            }
+                        }
+                    }, 200);
                 }
             })
             .catch(error => {
@@ -370,7 +395,7 @@ function loadCategories() {
 /**
  * Load vendors from API
  */
-async function loadVendors() {
+function loadVendors() {
     try {
         // Get user profile from localStorage
         const userProfile = getUserProfile();
@@ -412,6 +437,32 @@ async function loadVendors() {
                     newOption.value = 'new';
                     newOption.textContent = '+ Create New Vendor';
                     vendorSelect.appendChild(newOption);
+                    
+                    // Set vendor from extracted data if available
+                    setTimeout(() => {
+                        if (window.extractedVendor) {
+                            let matchFound = false;
+                            
+                            // Try to find an exact match first
+                            for (let i = 0; i < vendorSelect.options.length; i++) {
+                                const option = vendorSelect.options[i];
+                                if (option.textContent.toLowerCase() === window.extractedVendor.toLowerCase()) {
+                                    vendorSelect.value = option.value;
+                                    matchFound = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (!matchFound) {
+                                // Select "Create New" and fill in the name
+                                vendorSelect.value = 'new';
+                                const newVendorGroup = document.getElementById('new-vendor-group');
+                                newVendorGroup.classList.remove('hidden');
+                                document.getElementById('new-vendor').value = window.extractedVendor;
+                                document.getElementById('new-vendor').setAttribute('required', true);
+                            }
+                        }
+                    }, 300);
                 }
             })
             .catch(error => {
@@ -504,7 +555,6 @@ async function saveTransaction(transactionData) {
             const vendorSelect = document.getElementById('vendor');
             if (vendorSelect && vendorSelect.value) {
                 transactionData.vendor_id = vendorSelect.value;
-                console.log('Added vendor_id from select element:', transactionData.vendor_id);
             } else {
                 throw new Error('Vendor ID is required but could not be determined');
             }
@@ -549,9 +599,6 @@ async function saveTransaction(transactionData) {
             payload.transaction_id = transactionData.transaction_id;
         }
         
-        // Log the final payload being sent to the server
-        console.log('Sending transaction payload:', payload);
-        
         const response = await fetch(url, {
             method: method,
             headers: {
@@ -560,25 +607,11 @@ async function saveTransaction(transactionData) {
             body: JSON.stringify(payload)
         });
         
-        // Get the response as text first to see what's coming back
-        const responseText = await response.text();
-        console.log('Server response:', responseText);
-        
-        // If the response was not ok, try to parse it as JSON if possible
         if (!response.ok) {
-            let errorMessage;
-            try {
-                const errorData = JSON.parse(responseText);
-                errorMessage = errorData.message || `Server responded with status: ${response.status}`;
-            } catch (e) {
-                // If it can't be parsed as JSON, use the text directly
-                errorMessage = responseText || `Server responded with status: ${response.status}`;
-            }
-            throw new Error(errorMessage);
+            throw new Error(`Server responded with status: ${response.status}`);
         }
         
-        // Parse the successful response as JSON
-        const result = responseText ? JSON.parse(responseText) : {};
+        const result = await response.json();
         
         if (result.status !== 'success') {
             throw new Error(result.message || 'Failed to save transaction');
@@ -688,66 +721,6 @@ async function handleFileUpload(file, transactionData) {
 }
 
 /**
- * Validate form data before submission
- * @returns {boolean} True if form is valid
- */
-function validateForm() {
-    const title = document.getElementById('title').value.trim();
-    const amount = document.getElementById('amount').value;
-    const transactionDate = document.getElementById('transaction-date').value;
-    const categorySelect = document.getElementById('category');
-    const vendorSelect = document.getElementById('vendor');
-    const newCategoryInput = document.getElementById('new-category');
-    const newVendorInput = document.getElementById('new-vendor');
-    
-    // Validate title
-    if (!title) {
-        showToast('Please enter a title');
-        return false;
-    }
-    
-    // Validate amount
-    if (!amount || isNaN(parseFloat(amount))) {
-        showToast('Please enter a valid amount');
-        return false;
-    }
-    
-    // Validate date
-    if (!transactionDate) {
-        showToast('Please select a date');
-        return false;
-    }
-    
-    // Validate category
-    if (!categorySelect.value) {
-        showToast('Please select a category');
-        return false;
-    }
-    
-    // Validate new category if selected
-    if (categorySelect.value === 'new' && !newCategoryInput.value.trim()) {
-        showToast('Please enter a category name');
-        newCategoryInput.focus();
-        return false;
-    }
-    
-    // Validate vendor
-    if (!vendorSelect.value) {
-        showToast('Please select a vendor');
-        return false;
-    }
-    
-    // Validate new vendor if selected
-    if (vendorSelect.value === 'new' && !newVendorInput.value.trim()) {
-        showToast('Please enter a vendor name');
-        newVendorInput.focus();
-        return false;
-    }
-    
-    return true;
-}
-
-/**
  * Show a toast notification
  * @param {string} message - The message to display
  */
@@ -760,54 +733,4 @@ function showToast(message) {
     setTimeout(() => {
         toast.classList.add('hidden');
     }, 3000);
-}
-
-function debugFormFields() {
-    // Check form element
-    const form = document.getElementById('transaction-form');
-    console.log('Form found:', !!form);
-    
-    // Check category and vendor fields
-    const categorySelect = document.getElementById('category');
-    const vendorSelect = document.getElementById('vendor');
-    
-    console.log('Category select found:', !!categorySelect);
-    console.log('Vendor select found:', !!vendorSelect);
-    
-    if (categorySelect) {
-        console.log('Category select name:', categorySelect.getAttribute('name'));
-        console.log('Category select value:', categorySelect.value);
-        console.log('Category select options count:', categorySelect.options.length);
-    }
-    
-    if (vendorSelect) {
-        console.log('Vendor select name:', vendorSelect.getAttribute('name'));
-        console.log('Vendor select value:', vendorSelect.value);
-        console.log('Vendor select options count:', vendorSelect.options.length);
-    }
-    
-    // Create a test FormData object to check form field names
-    const formData = new FormData(form);
-    
-    console.log('--- Form Data Entries ---');
-    for (let [key, value] of formData.entries()) {
-        console.log(`${key}: ${value}`);
-    }
-    
-    // Check new category/vendor fields
-    const newCategoryInput = document.getElementById('new-category');
-    const newVendorInput = document.getElementById('new-vendor');
-    
-    console.log('New category input found:', !!newCategoryInput);
-    console.log('New vendor input found:', !!newVendorInput);
-    
-    if (newCategoryInput) {
-        console.log('New category input name:', newCategoryInput.getAttribute('name'));
-    }
-    
-    if (newVendorInput) {
-        console.log('New vendor input name:', newVendorInput.getAttribute('name'));
-    }
-    
-    return 'Form debugging complete. Check console for results.';
 }
