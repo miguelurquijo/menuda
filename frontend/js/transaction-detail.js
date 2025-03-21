@@ -141,7 +141,7 @@ form.addEventListener('submit', async (e) => {
         const categorySelectValue = categorySelect.value;
         const vendorSelectValue = vendorSelect.value;
         
-        // Create transaction data with basic info
+        // Create a simple transaction data object with only required fields
         let transactionData = {
             user_id: userProfile.user_id,
             title: formData.get('title'),
@@ -149,15 +149,21 @@ form.addEventListener('submit', async (e) => {
             transaction_date: formData.get('transaction_date')
         };
         
+        // Get the transaction ID if we're editing
+        const transactionId = document.getElementById('transaction-id').value;
+        if (transactionId) {
+            transactionData.transaction_id = transactionId;
+        }
+
         // Handle file upload if a file is selected
         const fileInput = document.getElementById('attachment');
         if (fileInput.files && fileInput.files[0]) {
             try {
-                // Use the uploadAttachment function to upload the file to the server
+                // Use the uploadAttachment function to upload the file
                 const uploadResult = await uploadAttachment(fileInput.files[0], userProfile.user_id);
                 
                 if (uploadResult && uploadResult.status === 'success') {
-                    // Add attachment details to transaction data
+                    // Add attachment details ONLY if upload was successful
                     transactionData.attachment_url = uploadResult.data.url;
                     transactionData.attachment_type = uploadResult.data.type;
                     console.log('File uploaded successfully:', uploadResult);
@@ -166,6 +172,17 @@ form.addEventListener('submit', async (e) => {
                 console.error('Error uploading file:', uploadError);
                 // Continue with transaction without attachment
             }
+        } else {
+            // Check if there's an existing attachment from a hidden field
+            const existingAttachmentUrl = document.getElementById('attachment-url').value;
+            const existingAttachmentType = document.getElementById('attachment-type').value;
+            
+            // Only add these if they both exist
+            if (existingAttachmentUrl && existingAttachmentType) {
+                transactionData.attachment_url = existingAttachmentUrl;
+                transactionData.attachment_type = existingAttachmentType;
+            }
+            // If there's no attachment, don't add these fields at all
         }
         
         // Handle new category if selected
@@ -193,7 +210,6 @@ form.addEventListener('submit', async (e) => {
             }
             
             // Create new vendor and get the ID
-            // Use the current category ID for the new vendor
             const newVendor = await createVendor(userProfile.user_id, newVendorName, categoryId);
             vendorId = newVendor.vendor_id;
         }
@@ -203,13 +219,43 @@ form.addEventListener('submit', async (e) => {
         
         console.log('Saving transaction with data:', transactionData);
         
-        // Save transaction with proper IDs
-        const saveResult = await saveTransaction(transactionData);
-        console.log('Transaction saved successfully:', saveResult);
+        // Now save the transaction with a streamlined approach
+        const isUpdate = !!transactionData.transaction_id;
+        const url = isUpdate 
+            ? `http://localhost:5000/api/transactions/${transactionData.transaction_id}` 
+            : 'http://localhost:5000/api/transactions';
+        const method = isUpdate ? 'PUT' : 'POST';
         
-        // Show success message and immediately redirect to transactions.html
+        console.log(`Sending ${method} request to ${url}`);
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(transactionData)
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Error response:', errorText);
+            throw new Error(`Server responded with status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.status !== 'success') {
+            throw new Error(result.message || 'Failed to save transaction');
+        }
+        
+        console.log('Transaction saved successfully:', result);
+        
+        // Show success message and immediately redirect
         showToast('Transaction saved successfully');
-        window.location.href = 'transactions.html';
+        setTimeout(() => {
+            window.location.href = 'transactions.html';
+        }, 500);
+        
     } catch (error) {
         console.error('Error saving transaction:', error);
         showToast('Error: ' + error.message);
@@ -623,17 +669,37 @@ async function saveTransaction(transactionData) {
             }
         }
         
-        // Create final payload with default values for nullable fields
+        // Create final payload with proper handling for nullable fields
         const payload = {
             user_id: transactionData.user_id,
             title: transactionData.title,
             amount: transactionData.amount,
             transaction_date: transactionData.transaction_date,
             category_id: transactionData.category_id,
-            vendor_id: transactionData.vendor_id,
-            attachment_url: transactionData.attachment_url || null,
-            attachment_type: transactionData.attachment_type || null
+            vendor_id: transactionData.vendor_id
         };
+        
+        // Only add attachment fields if they have values
+        if (transactionData.attachment_url) {
+            payload.attachment_url = transactionData.attachment_url;
+            
+            // Always ensure attachment_type is provided when attachment_url exists
+            if (!transactionData.attachment_type) {
+                // Auto-detect type from URL
+                if (payload.attachment_url.match(/\.(jpeg|jpg|png|gif)$/i)) {
+                    payload.attachment_type = 'image';
+                } else if (payload.attachment_url.match(/\.(pdf)$/i)) {
+                    payload.attachment_type = 'pdf';
+                } else if (payload.attachment_url.match(/\.(mp3|wav|ogg)$/i)) {
+                    payload.attachment_type = 'audio';
+                } else {
+                    payload.attachment_type = 'file';
+                }
+            } else {
+                payload.attachment_type = transactionData.attachment_type;
+            }
+        }
+        // Do not set attachment fields at all if no URL is provided
         
         if (transactionData.transaction_id) {
             payload.transaction_id = transactionData.transaction_id;
