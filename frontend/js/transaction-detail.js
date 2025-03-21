@@ -567,7 +567,11 @@ async function loadTransaction(transactionId) {
         
         const userId = userProfile.user_id;
         
-        // Better approach: Get a single transaction instead of all transactions
+        // Load categories and vendors first
+        const categoriesPromise = loadCategoriesAsync(userId);
+        const vendorsPromise = loadVendorsAsync(userId);
+        
+        // Then fetch transaction data
         const response = await fetch(`http://localhost:5000/api/transactions/${transactionId}?user_id=${userId}`);
         
         if (!response.ok) {
@@ -579,6 +583,9 @@ async function loadTransaction(transactionId) {
         if (data.status !== 'success') {
             throw new Error(data.message || 'Failed to load transaction');
         }
+        
+        // Wait for categories and vendors to finish loading
+        await Promise.all([categoriesPromise, vendorsPromise]);
         
         // Get transaction from response
         const transaction = data.data;
@@ -592,9 +599,39 @@ async function loadTransaction(transactionId) {
         const formattedDate = date.toISOString().split('T')[0];
         document.getElementById('transaction-date').value = formattedDate;
         
-        // Set category and vendor (without delay)
-        document.getElementById('category').value = transaction.category_id;
-        document.getElementById('vendor').value = transaction.vendor_id;
+        // Set category and vendor with retry logic
+        setTimeout(() => {
+            const categorySelect = document.getElementById('category');
+            const vendorSelect = document.getElementById('vendor');
+            
+            // Set category
+            if (categorySelect && transaction.category_id) {
+                categorySelect.value = transaction.category_id;
+                // If setting failed, try to find by name as fallback
+                if (categorySelect.value !== transaction.category_id) {
+                    for (let i = 0; i < categorySelect.options.length; i++) {
+                        if (categorySelect.options[i].textContent === transaction.category_name) {
+                            categorySelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Set vendor
+            if (vendorSelect && transaction.vendor_id) {
+                vendorSelect.value = transaction.vendor_id;
+                // If setting failed, try to find by name as fallback
+                if (vendorSelect.value !== transaction.vendor_id) {
+                    for (let i = 0; i < vendorSelect.options.length; i++) {
+                        if (vendorSelect.options[i].textContent === transaction.vendor_name) {
+                            vendorSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+            }
+        }, 500); // Give a short delay to ensure dropdown options are populated
         
         // Handle attachment if present
         if (transaction.attachment_url) {
@@ -623,6 +660,115 @@ async function loadTransaction(transactionId) {
         // Hide loading overlay on error
         loadingOverlay.style.display = 'none';
     }
+}
+
+/**
+ * Load categories asynchronously and return a promise
+ * @param {string} userId - The user ID
+ * @returns {Promise} Promise that resolves when categories are loaded
+ */
+function loadCategoriesAsync(userId) {
+    return new Promise((resolve, reject) => {
+        try {
+            fetch(`http://localhost:5000/api/categories?user_id=${userId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Failed to load categories: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success') {
+                        const categorySelect = document.getElementById('category');
+                        
+                        // Clear existing options except the first one
+                        while (categorySelect.options.length > 1) {
+                            categorySelect.remove(1);
+                        }
+                        
+                        // Add categories
+                        data.data.forEach(category => {
+                            const option = document.createElement('option');
+                            option.value = category.category_id;
+                            option.textContent = category.category_name;
+                            categorySelect.appendChild(option);
+                        });
+                        
+                        // Add "Create New" option
+                        const newOption = document.createElement('option');
+                        newOption.value = 'new';
+                        newOption.textContent = '+ Create New Category';
+                        categorySelect.appendChild(newOption);
+                        
+                        resolve();
+                    } else {
+                        reject(new Error(data.message || 'Failed to load categories'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading categories:', error);
+                    reject(error);
+                });
+        } catch (error) {
+            console.error('Error in loadCategoriesAsync function:', error);
+            reject(error);
+        }
+    });
+}
+
+/**
+ * Load vendors asynchronously and return a promise
+ * @param {string} userId - The user ID
+ * @returns {Promise} Promise that resolves when vendors are loaded
+ */
+function loadVendorsAsync(userId) {
+    return new Promise((resolve, reject) => {
+        try {
+            fetch(`http://localhost:5000/api/vendors?user_id=${userId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Failed to load vendors: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success') {
+                        const vendorSelect = document.getElementById('vendor');
+                        
+                        // Clear existing options except the first one
+                        while (vendorSelect.options.length > 1) {
+                            vendorSelect.remove(1);
+                        }
+                        
+                        // Add vendors
+                        data.data.forEach(vendor => {
+                            const option = document.createElement('option');
+                            option.value = vendor.vendor_id;
+                            option.textContent = vendor.vendor_name;
+                            option.dataset.categoryId = vendor.category_id;
+                            vendorSelect.appendChild(option);
+                        });
+                        
+                        // Add "Create New" option
+                        const newOption = document.createElement('option');
+                        newOption.value = 'new';
+                        newOption.textContent = '+ Create New Vendor';
+                        vendorSelect.appendChild(newOption);
+                        
+                        resolve();
+                    } else {
+                        reject(new Error(data.message || 'Failed to load vendors'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading vendors:', error);
+                    reject(error);
+                });
+        } catch (error) {
+            console.error('Error in loadVendorsAsync function:', error);
+            reject(error);
+        }
+    });
 }
 
 /**
