@@ -77,6 +77,8 @@ async function initTransactionsPage() {
  * @param {string} userId - The user ID to fetch transactions for
  * @return {Promise<Array>} Promise resolving to array of transactions
  */
+
+
 async function fetchUserTransactions(userId) {
     try {
         const response = await fetch(`http://localhost:5000/api/transactions?user_id=${userId}`);
@@ -149,10 +151,15 @@ function displayTransactions(transactions) {
         
         const amountClass = amount >= 0 ? 'positive' : 'negative';
         
+        // Add attachment indicator if there's an attachment
+        const hasAttachment = transaction.attachment_url ? true : false;
+        const attachmentIcon = hasAttachment ? 
+            '<span class="attachment-icon" title="Has attachment">📎</span>' : '';
+        
         tableHtml += `
-            <tr data-lh-id="transaction-row">
+            <tr data-lh-id="transaction-row" data-transaction-id="${transaction.transaction_id}" class="transaction-row">
                 <td>${formattedDate}</td>
-                <td>${transaction.title}</td>
+                <td>${transaction.title} ${attachmentIcon}</td>
                 <td>${transaction.category_name}</td>
                 <td>${transaction.vendor_name}</td>
                 <td class="${amountClass}">${formattedAmount}</td>
@@ -166,4 +173,18 @@ function displayTransactions(transactions) {
     `;
     
     transactionsContainer.innerHTML = tableHtml;
+    
+    // Add click event to transaction rows
+    const transactionRows = document.querySelectorAll('.transaction-row');
+    transactionRows.forEach(row => {
+        row.addEventListener('click', () => {
+            const transactionId = row.getAttribute('data-transaction-id');
+            viewTransactionDetails(transactionId);
+        });
+    });
+}
+
+// Function to view transaction details
+function viewTransactionDetails(transactionId) {
+    window.location.href = `transaction-detail.html?id=${transactionId}`;
 }

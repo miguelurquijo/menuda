@@ -33,6 +33,10 @@
     </header>
 
     <main class="container">
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="spinner"></div>
+            <p>Loading transaction details...</p>
+        </div>
         <form id="transaction-form" class="transaction-form">
             <input type="hidden" id="transaction-id" name="transaction_id">
             
@@ -100,9 +104,23 @@
                             </svg>
                         </button>
                     </div>
-                    <input type="file" id="attachment" name="attachment" accept="image/*,.pdf" data-lh-id="transaction-attachment">
-                    <input type="hidden" id="attachment-url" name="attachment_url">
-                    <input type="hidden" id="attachment-type" name="attachment_type">
+                    <div class="file-upload-container">
+                        <label for="attachment" class="file-upload-label" data-lh-id="upload-attachment">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Upload Receipt</span>
+                        </label>
+                        <input type="file" id="attachment" name="attachment" accept="image/*,.pdf" class="file-input" data-lh-id="transaction-attachment">
+                        <input type="hidden" id="attachment-url" name="attachment_url">
+                        <input type="hidden" id="attachment-type" name="attachment_type">
+                    </div>
+                    <div id="upload-progress" class="upload-progress hidden">
+                        <div class="progress-bar">
+                            <div id="progress-fill" class="progress-fill"></div>
+                        </div>
+                        <span id="progress-text" class="progress-text">Uploading... 0%</span>
+                    </div>
                 </div>
             </div>
             

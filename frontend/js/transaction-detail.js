@@ -35,6 +35,14 @@ document.addEventListener('DOMContentLoaded', function() {
     initPage();
 });
 
+// Add event listener to the attachment preview
+document.getElementById('attachment-image').addEventListener('click', function() {
+    const url = this.src;
+    if (url) {
+        window.open(url, '_blank');
+    }
+});
+
 /**
  * Initialize page elements and event listeners
  */
@@ -111,82 +119,102 @@ function initPage() {
         }
     });
     
-    // Handle form submission
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        try {
-            // Show loading state
-            showToast('Saving transaction...');
-            
-            // Get form data
-            const formData = new FormData(form);
-            
-            // Get user profile
-            const userProfile = getUserProfile();
-            if (!userProfile || !userProfile.user_id) {
-                throw new Error('User profile not found');
-            }
-            
-            // Get original selected values from the form elements
-            const categorySelectValue = categorySelect.value;
-            const vendorSelectValue = vendorSelect.value;
-            
-            // Create transaction data with basic info
-            let transactionData = {
-                user_id: userProfile.user_id,
-                title: formData.get('title'),
-                amount: parseFloat(formData.get('amount')),
-                transaction_date: formData.get('transaction_date')
-            };
-            
-            // Handle new category if selected
-            let categoryId = categorySelectValue;
-            if (categorySelectValue === 'new') {
-                const newCategoryName = newCategoryInput.value.trim();
-                if (!newCategoryName) {
-                    throw new Error('New category name is required');
-                }
-                
-                // Create new category and get the ID
-                const newCategory = await createCategory(userProfile.user_id, newCategoryName);
-                categoryId = newCategory.category_id;
-            }
-            
-            // Assign category to transaction data
-            transactionData.category_id = categoryId;
-            
-            // Handle new vendor if selected
-            let vendorId = vendorSelectValue;
-            if (vendorSelectValue === 'new') {
-                const newVendorName = newVendorInput.value.trim();
-                if (!newVendorName) {
-                    throw new Error('New vendor name is required');
-                }
-                
-                // Create new vendor and get the ID
-                // Use the current category ID for the new vendor
-                const newVendor = await createVendor(userProfile.user_id, newVendorName, categoryId);
-                vendorId = newVendor.vendor_id;
-            }
-            
-            // Assign vendor to transaction data
-            transactionData.vendor_id = vendorId;
-            
-            // Save transaction with proper IDs
-            await saveTransaction(transactionData);
-            
-            // Show success message and redirect
-            showToast('Transaction saved successfully');
-            setTimeout(() => {
-                window.location.href = 'transactions.html';
-            }, 1000);
-        } catch (error) {
-            console.error('Error saving transaction:', error);
-            showToast('Error: ' + error.message);
-        }
-    });
+// Handle form submission with file upload
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
     
+    try {
+        console.log('Form submission started');
+        // Show loading state
+        showToast('Saving transaction...');
+        
+        // Get form data
+        const formData = new FormData(form);
+        
+        // Get user profile
+        const userProfile = getUserProfile();
+        if (!userProfile || !userProfile.user_id) {
+            throw new Error('User profile not found');
+        }
+        
+        // Get original selected values from the form elements
+        const categorySelectValue = categorySelect.value;
+        const vendorSelectValue = vendorSelect.value;
+        
+        // Create transaction data with basic info
+        let transactionData = {
+            user_id: userProfile.user_id,
+            title: formData.get('title'),
+            amount: parseFloat(formData.get('amount')),
+            transaction_date: formData.get('transaction_date')
+        };
+        
+        // Handle file upload if a file is selected
+        const fileInput = document.getElementById('attachment');
+        if (fileInput.files && fileInput.files[0]) {
+            try {
+                // Use the uploadAttachment function to upload the file to the server
+                const uploadResult = await uploadAttachment(fileInput.files[0], userProfile.user_id);
+                
+                if (uploadResult && uploadResult.status === 'success') {
+                    // Add attachment details to transaction data
+                    transactionData.attachment_url = uploadResult.data.url;
+                    transactionData.attachment_type = uploadResult.data.type;
+                    console.log('File uploaded successfully:', uploadResult);
+                }
+            } catch (uploadError) {
+                console.error('Error uploading file:', uploadError);
+                // Continue with transaction without attachment
+            }
+        }
+        
+        // Handle new category if selected
+        let categoryId = categorySelectValue;
+        if (categorySelectValue === 'new') {
+            const newCategoryName = newCategoryInput.value.trim();
+            if (!newCategoryName) {
+                throw new Error('New category name is required');
+            }
+            
+            // Create new category and get the ID
+            const newCategory = await createCategory(userProfile.user_id, newCategoryName);
+            categoryId = newCategory.category_id;
+        }
+        
+        // Assign category to transaction data
+        transactionData.category_id = categoryId;
+        
+        // Handle new vendor if selected
+        let vendorId = vendorSelectValue;
+        if (vendorSelectValue === 'new') {
+            const newVendorName = newVendorInput.value.trim();
+            if (!newVendorName) {
+                throw new Error('New vendor name is required');
+            }
+            
+            // Create new vendor and get the ID
+            // Use the current category ID for the new vendor
+            const newVendor = await createVendor(userProfile.user_id, newVendorName, categoryId);
+            vendorId = newVendor.vendor_id;
+        }
+        
+        // Assign vendor to transaction data
+        transactionData.vendor_id = vendorId;
+        
+        console.log('Saving transaction with data:', transactionData);
+        
+        // Save transaction with proper IDs
+        const saveResult = await saveTransaction(transactionData);
+        console.log('Transaction saved successfully:', saveResult);
+        
+        // Show success message and immediately redirect to transactions.html
+        showToast('Transaction saved successfully');
+        window.location.href = 'transactions.html';
+    } catch (error) {
+        console.error('Error saving transaction:', error);
+        showToast('Error: ' + error.message);
+    }
+});
     // Handle delete transaction
     if (deleteButton) {
         deleteButton.addEventListener('click', async () => {
@@ -207,9 +235,11 @@ function initPage() {
         });
     }
     
-    // Handle attachment preview
+   // Handle attachment preview
     fileInput.addEventListener('change', (e) => {
-        handleFileSelection(e.target.files[0]);
+        if (e.target.files && e.target.files[0]) {
+            handleFileSelection(e.target.files[0]);
+        }
     });
     
     // Handle remove attachment
@@ -479,6 +509,10 @@ function loadVendors() {
  * @param {string} transactionId - The ID of the transaction to load
  */
 async function loadTransaction(transactionId) {
+    // Show loading overlay
+    const loadingOverlay = document.getElementById('loading-overlay');
+    loadingOverlay.style.display = 'flex';
+    
     try {
         const userProfile = getUserProfile();
         if (!userProfile || !userProfile.user_id) {
@@ -486,24 +520,22 @@ async function loadTransaction(transactionId) {
         }
         
         const userId = userProfile.user_id;
-        const response = await fetch(`http://localhost:5000/api/transactions?user_id=${userId}`);
+        
+        // Better approach: Get a single transaction instead of all transactions
+        const response = await fetch(`http://localhost:5000/api/transactions/${transactionId}?user_id=${userId}`);
         
         if (!response.ok) {
-            throw new Error(`Failed to load transactions (${response.status})`);
+            throw new Error(`Failed to load transaction (${response.status})`);
         }
         
         const data = await response.json();
         
         if (data.status !== 'success') {
-            throw new Error(data.message || 'Failed to load transactions');
+            throw new Error(data.message || 'Failed to load transaction');
         }
         
-        // Find the transaction by ID
-        const transaction = data.data.find(t => t.transaction_id === transactionId);
-        
-        if (!transaction) {
-            throw new Error('Transaction not found');
-        }
+        // Get transaction from response
+        const transaction = data.data;
         
         // Fill form fields
         document.getElementById('title').value = transaction.title;
@@ -514,11 +546,9 @@ async function loadTransaction(transactionId) {
         const formattedDate = date.toISOString().split('T')[0];
         document.getElementById('transaction-date').value = formattedDate;
         
-        // Set category and vendor (after a delay to ensure they're loaded)
-        setTimeout(() => {
-            document.getElementById('category').value = transaction.category_id;
-            document.getElementById('vendor').value = transaction.vendor_id;
-        }, 500);
+        // Set category and vendor (without delay)
+        document.getElementById('category').value = transaction.category_id;
+        document.getElementById('vendor').value = transaction.vendor_id;
         
         // Handle attachment if present
         if (transaction.attachment_url) {
@@ -537,9 +567,15 @@ async function loadTransaction(transactionId) {
                 attachmentImage.classList.remove('hidden');
             }
         }
+        
+        // Hide loading overlay when finished
+        loadingOverlay.style.display = 'none';
     } catch (error) {
         console.error('Error loading transaction:', error);
         showToast('Error loading transaction details: ' + error.message);
+        
+        // Hide loading overlay on error
+        loadingOverlay.style.display = 'none';
     }
 }
 
@@ -549,6 +585,8 @@ async function loadTransaction(transactionId) {
  */
 async function saveTransaction(transactionData) {
     try {
+        console.log('saveTransaction called with:', transactionData);
+        
         // Make sure vendor_id is included
         if (!transactionData.vendor_id) {
             // Get it directly from the select element as a last resort
@@ -574,6 +612,8 @@ async function saveTransaction(transactionData) {
             : 'http://localhost:5000/api/transactions';
         const method = isUpdate ? 'PUT' : 'POST';
         
+        console.log(`Sending ${method} request to ${url}`);
+        
         // Format transaction date if needed
         if (transactionData.transaction_date) {
             // Ensure date is in the format expected by the server (YYYY-MM-DD)
@@ -591,13 +631,15 @@ async function saveTransaction(transactionData) {
             transaction_date: transactionData.transaction_date,
             category_id: transactionData.category_id,
             vendor_id: transactionData.vendor_id,
-            attachment_url: transactionData.attachment_url || '', // Empty string instead of null
-            attachment_type: transactionData.attachment_type || 'none' // 'none' instead of null
+            attachment_url: transactionData.attachment_url || null,
+            attachment_type: transactionData.attachment_type || null
         };
         
         if (transactionData.transaction_id) {
             payload.transaction_id = transactionData.transaction_id;
         }
+        
+        console.log('Final payload:', payload);
         
         const response = await fetch(url, {
             method: method,
@@ -607,11 +649,16 @@ async function saveTransaction(transactionData) {
             body: JSON.stringify(payload)
         });
         
+        console.log('Response status:', response.status);
+        
         if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Error response:', errorText);
             throw new Error(`Server responded with status: ${response.status}`);
         }
         
         const result = await response.json();
+        console.log('Response data:', result);
         
         if (result.status !== 'success') {
             throw new Error(result.message || 'Failed to save transaction');
@@ -619,7 +666,7 @@ async function saveTransaction(transactionData) {
         
         return result;
     } catch (error) {
-        console.error('Error saving transaction:', error);
+        console.error('Error in saveTransaction:', error);
         throw error;
     }
 }
@@ -733,4 +780,83 @@ function showToast(message) {
     setTimeout(() => {
         toast.classList.add('hidden');
     }, 3000);
+}
+
+/**
+ * Upload file to server
+ * @param {File} file - The file to upload
+ * @param {string} userId - User ID for the attachment
+ * @returns {Promise<Object>} Promise resolving to upload result with URL
+ */
+async function uploadAttachment(file, userId) {
+    try {
+        if (!file) {
+            return null;
+        }
+        
+        // Show upload progress
+        const uploadProgress = document.getElementById('upload-progress');
+        const progressFill = document.getElementById('progress-fill');
+        const progressText = document.getElementById('progress-text');
+        
+        uploadProgress.classList.remove('hidden');
+        progressFill.style.width = '0%';
+        progressText.textContent = 'Uploading... 0%';
+        
+        // Create form data
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('user_id', userId);
+        
+        // Create XMLHttpRequest to track progress
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            
+            // Track upload progress
+            xhr.upload.addEventListener('progress', (event) => {
+                if (event.lengthComputable) {
+                    const percentComplete = Math.round((event.loaded / event.total) * 100);
+                    progressFill.style.width = percentComplete + '%';
+                    progressText.textContent = `Uploading... ${percentComplete}%`;
+                }
+            });
+            
+            // Handle response
+            xhr.addEventListener('load', () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    // Success
+                    progressText.textContent = 'Upload complete!';
+                    setTimeout(() => {
+                        uploadProgress.classList.add('hidden');
+                    }, 1000);
+                    
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        resolve(response);
+                    } catch (error) {
+                        reject(new Error('Invalid response format'));
+                    }
+                } else {
+                    // Error
+                    progressText.textContent = 'Upload failed!';
+                    progressFill.style.backgroundColor = 'var(--error-color)';
+                    reject(new Error(`Upload failed with status ${xhr.status}`));
+                }
+            });
+            
+            // Handle error
+            xhr.addEventListener('error', () => {
+                progressText.textContent = 'Upload failed!';
+                progressFill.style.backgroundColor = 'var(--error-color)';
+                reject(new Error('Network error during upload'));
+            });
+            
+            // Open and send request
+            xhr.open('POST', 'http://localhost:5000/api/attachments/upload');
+            xhr.send(formData);
+        });
+    } catch (error) {
+        console.error('Error uploading attachment:', error);
+        throw error;
+    }
 }

@@ -9,6 +9,9 @@ from routes.transactions import transactions_bp
 from routes.vendors import vendors_bp
 from routes.categories import categories_bp
 from routes.invoices import invoices_bp
+from routes.attachments import attachments_bp
+from flask import send_from_directory
+
 
 # Load environment variables
 load_dotenv()
@@ -24,7 +27,7 @@ def create_app():
     # Enable CORS for all routes
     CORS(app, resources={
         "/api/*": {
-            "origins": ["http://127.0.0.1:8080", "http://localhost:8080"],
+            "origins": ["http://127.0.0.1:8080", "http://localhost:8080", "http://192.168.1.10:8080"],
             "methods": ["GET", "POST", "PUT", "DELETE"],
             "allow_headers": ["Content-Type"]
         }
@@ -36,6 +39,8 @@ def create_app():
     app.register_blueprint(vendors_bp, url_prefix='/api')  # Make sure this line is present
     app.register_blueprint(categories_bp, url_prefix='/api')
     app.register_blueprint(invoices_bp, url_prefix='/api')
+    app.register_blueprint(attachments_bp, url_prefix='/api')
+
 
     
     @app.route('/api/health', methods=['GET'])
@@ -43,7 +48,17 @@ def create_app():
         """Health check endpoint"""
         return {'status': 'healthy', 'service': 'Menuda Finance API'}
     
+
+    @app.route('/uploads/<user_id>/<filename>')
+    def uploaded_file(user_id, filename):
+        """
+        Serve uploaded files
+        """
+        return send_from_directory(os.path.join(os.getcwd(), 'uploads', user_id), filename)
+    
     return app
+
+
 
 # Create the application instance
 app = create_app()
