@@ -242,11 +242,14 @@ function initPage() {
             const formattedDate = today.toISOString().split('T')[0];
             document.getElementById('transaction-date').value = formattedDate;
         }
+        // Load categories and vendors in parallel for new transactions
+        Promise.all([
+            loadCategories(), 
+            loadVendors()
+        ]).catch(error => {
+            console.error('Error initializing form data:', error);
+        });
     }
-    
-    // Load categories and vendors
-    loadCategories();
-    loadVendors();
     
     // Back button event
     backButton.addEventListener('click', () => {
@@ -686,7 +689,7 @@ function loadVendors() {
 
 // Load transaction details for editing
 /**
- * Load transaction details for editing
+ * Load transaction details for editing with improved timing and request management
  * @param {string} transactionId - The ID of the transaction to load
  */
 async function loadTransaction(transactionId) {
@@ -705,88 +708,40 @@ async function loadTransaction(transactionId) {
         
         const userId = userProfile.user_id;
         
-        // Load categories and vendors first
-        const categoriesPromise = loadCategoriesAsync(userId);
-        const vendorsPromise = loadVendorsAsync(userId);
+        // Create a request timeout promise to handle network issues
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Request timed out')), 10000); // 10 second timeout
+        });
         
-        // Then fetch transaction data
-        const response = await fetch(`http://127.0.0.1:5000/api/transactions/${transactionId}?user_id=${userId}`);
+        // Load all data in parallel with proper error handling and timeout
+        const [categories, vendors, transactionResponse] = await Promise.all([
+            // Get categories with retry
+            fetchWithRetry(`http://127.0.0.1:5000/api/categories?user_id=${userId}`),
+            // Get vendors with retry
+            fetchWithRetry(`http://127.0.0.1:5000/api/vendors?user_id=${userId}`),
+            // Get transaction with retry
+            fetchWithRetry(`http://127.0.0.1:5000/api/transactions/${transactionId}?user_id=${userId}`)
+        ]);
         
-        if (!response.ok) {
-            throw new Error(`Failed to load transaction (${response.status})`);
+        // Process categories
+        if (categories.status === 'success') {
+            populateCategories(categories.data);
+        } else {
+            console.warn('Failed to load categories:', categories.message);
         }
         
-        const data = await response.json();
-        
-        if (data.status !== 'success') {
-            throw new Error(data.message || 'Failed to load transaction');
+        // Process vendors
+        if (vendors.status === 'success') {
+            populateVendors(vendors.data);
+        } else {
+            console.warn('Failed to load vendors:', vendors.message);
         }
         
-        // Wait for categories and vendors to finish loading
-        await Promise.all([categoriesPromise, vendorsPromise]);
-        
-        // Get transaction from response
-        const transaction = data.data;
-        
-        // Fill form fields
-        document.getElementById('title').value = transaction.title;
-        document.getElementById('amount').value = transaction.amount;
-        
-        // Format date properly
-        const date = new Date(transaction.transaction_date);
-        const formattedDate = date.toISOString().split('T')[0];
-        document.getElementById('transaction-date').value = formattedDate;
-        
-        // Set category and vendor with retry logic
-        setTimeout(() => {
-            const categorySelect = document.getElementById('category');
-            const vendorSelect = document.getElementById('vendor');
-            
-            // Set category
-            if (categorySelect && transaction.category_id) {
-                categorySelect.value = transaction.category_id;
-                // If setting failed, try to find by name as fallback
-                if (categorySelect.value !== transaction.category_id) {
-                    for (let i = 0; i < categorySelect.options.length; i++) {
-                        if (categorySelect.options[i].textContent === transaction.category_name) {
-                            categorySelect.selectedIndex = i;
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            // Set vendor
-            if (vendorSelect && transaction.vendor_id) {
-                vendorSelect.value = transaction.vendor_id;
-                // If setting failed, try to find by name as fallback
-                if (vendorSelect.value !== transaction.vendor_id) {
-                    for (let i = 0; i < vendorSelect.options.length; i++) {
-                        if (vendorSelect.options[i].textContent === transaction.vendor_name) {
-                            vendorSelect.selectedIndex = i;
-                            break;
-                        }
-                    }
-                }
-            }
-        }, 500); // Give a short delay to ensure dropdown options are populated
-        
-        // Handle attachment if present
-        if (transaction.attachment_url) {
-            document.getElementById('attachment-url').value = transaction.attachment_url;
-            document.getElementById('attachment-type').value = transaction.attachment_type;
-            document.getElementById('attachment-name').textContent = transaction.attachment_url.split('/').pop();
-            
-            // Show attachment preview
-            const currentAttachment = document.getElementById('current-attachment');
-            currentAttachment.classList.remove('hidden');
-            
-            // If it's an image, show the preview
-            if (transaction.attachment_type === 'image') {
-                const attachmentImage = document.getElementById('attachment-image');
-                attachmentImage.src = transaction.attachment_url;
-                attachmentImage.classList.remove('hidden');
-            }
+        // Process transaction
+        if (transactionResponse.status === 'success') {
+            populateTransactionForm(transactionResponse.data);
+        } else {
+            throw new Error(transactionResponse.message || 'Failed to load transaction');
         }
         
         // Hide loading overlay when finished
@@ -796,120 +751,317 @@ async function loadTransaction(transactionId) {
         console.error('Error loading transaction:', error);
         window.showToast('Error loading transaction details: ' + error.message);
         
-        // Hide loading overlay on error
-        loadingOverlay.style.display = 'none';
+        // Hide loading overlay on error, but with a slight delay to ensure user sees something happened
+        setTimeout(() => {
+            loadingOverlay.style.display = 'none';
+            transactionForm.classList.remove('hidden');
+        }, 500);
+    }
+}
+
+/**
+ * Fetch with retry functionality
+ * @param {string} url - The URL to fetch
+ * @param {Object} options - Fetch options
+ * @param {number} retries - Number of retries (default: 3)
+ * @param {number} delay - Delay between retries in ms (default: 1000)
+ * @returns {Promise<Object>} - Promise resolving to JSON response
+ */
+async function fetchWithRetry(url, options = {}, retries = 3, delay = 1000) {
+    try {
+        const response = await fetch(url, options);
+        
+        if (!response.ok) {
+            throw new Error(`Server responded with status: ${response.status}`);
+        }
+        
+        return await response.json();
+    } catch (error) {
+        if (retries <= 0) {
+            throw error;
+        }
+        
+        console.log(`Retrying fetch for ${url}. Retries left: ${retries-1}`);
+        
+        // Wait for the specified delay
+        await new Promise(resolve => setTimeout(resolve, delay));
+        
+        // Retry with one fewer retry remaining
+        return fetchWithRetry(url, options, retries - 1, delay);
+    }
+}
+
+/**
+ * Populate categories dropdown
+ * @param {Array} categories - Array of category objects
+ */
+function populateCategories(categories) {
+    const categorySelect = document.getElementById('category');
+    
+    // Clear existing options except the first one
+    while (categorySelect.options.length > 1) {
+        categorySelect.remove(1);
+    }
+    
+    // Add categories
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.category_id;
+        option.textContent = category.category_name;
+        categorySelect.appendChild(option);
+    });
+    
+    // Add "Create New" option
+    const newOption = document.createElement('option');
+    newOption.value = 'new';
+    newOption.textContent = '+ Create New Category';
+    categorySelect.appendChild(newOption);
+}
+
+/**
+ * Populate vendors dropdown
+ * @param {Array} vendors - Array of vendor objects
+ */
+function populateVendors(vendors) {
+    const vendorSelect = document.getElementById('vendor');
+    
+    // Clear existing options except the first one
+    while (vendorSelect.options.length > 1) {
+        vendorSelect.remove(1);
+    }
+    
+    // Add vendors
+    vendors.forEach(vendor => {
+        const option = document.createElement('option');
+        option.value = vendor.vendor_id;
+        option.textContent = vendor.vendor_name;
+        option.dataset.categoryId = vendor.category_id;
+        vendorSelect.appendChild(option);
+    });
+    
+    // Add "Create New" option
+    const newOption = document.createElement('option');
+    newOption.value = 'new';
+    newOption.textContent = '+ Create New Vendor';
+    vendorSelect.appendChild(newOption);
+}
+
+/**
+ * Populate the transaction form with transaction data
+ * @param {Object} transaction - Transaction data object
+ */
+function populateTransactionForm(transaction) {
+    // Fill form fields
+    document.getElementById('title').value = transaction.title;
+    document.getElementById('amount').value = transaction.amount;
+    
+    // Format date properly
+    const date = new Date(transaction.transaction_date);
+    const formattedDate = date.toISOString().split('T')[0];
+    document.getElementById('transaction-date').value = formattedDate;
+    
+    // Set category and vendor with a small delay to ensure dropdowns are populated
+    setTimeout(() => {
+        const categorySelect = document.getElementById('category');
+        const vendorSelect = document.getElementById('vendor');
+        
+        // Set category
+        if (categorySelect && transaction.category_id) {
+            categorySelect.value = transaction.category_id;
+            // If setting failed, try to find by name as fallback
+            if (categorySelect.value !== transaction.category_id) {
+                for (let i = 0; i < categorySelect.options.length; i++) {
+                    if (categorySelect.options[i].textContent === transaction.category_name) {
+                        categorySelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Set vendor
+        if (vendorSelect && transaction.vendor_id) {
+            vendorSelect.value = transaction.vendor_id;
+            // If setting failed, try to find by name as fallback
+            if (vendorSelect.value !== transaction.vendor_id) {
+                for (let i = 0; i < vendorSelect.options.length; i++) {
+                    if (vendorSelect.options[i].textContent === transaction.vendor_name) {
+                        vendorSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+    }, 100); // Reduced from 500ms to 100ms
+    
+    // Handle attachment if present
+    if (transaction.attachment_url) {
+        document.getElementById('attachment-url').value = transaction.attachment_url;
+        document.getElementById('attachment-type').value = transaction.attachment_type;
+        document.getElementById('attachment-name').textContent = transaction.attachment_url.split('/').pop();
+        
+        // Show attachment preview
+        const currentAttachment = document.getElementById('current-attachment');
+        currentAttachment.classList.remove('hidden');
+        
+        // If it's an image, show the preview
+        if (transaction.attachment_type === 'image') {
+            const attachmentImage = document.getElementById('attachment-image');
+            attachmentImage.src = transaction.attachment_url;
+            attachmentImage.classList.remove('hidden');
+        }
     }
 }
 
 // Load categories asynchronously and return a promise
 /**
- * Load categories asynchronously and return a promise
- * @param {string} userId - The user ID
- * @returns {Promise} Promise that resolves when categories are loaded
+ * Load categories from API with improved error handling and retry logic
  */
-function loadCategoriesAsync(userId) {
-    return new Promise((resolve, reject) => {
-        try {
-            fetch(`http://127.0.0.1:5000/api/categories?user_id=${userId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Failed to load categories: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.status === 'success') {
-                        const categorySelect = document.getElementById('category');
-                        
-                        // Clear existing options except the first one
-                        while (categorySelect.options.length > 1) {
-                            categorySelect.remove(1);
-                        }
-                        
-                        // Add categories
-                        data.data.forEach(category => {
-                            const option = document.createElement('option');
-                            option.value = category.category_id;
-                            option.textContent = category.category_name;
-                            categorySelect.appendChild(option);
-                        });
-                        
-                        // Add "Create New" option
-                        const newOption = document.createElement('option');
-                        newOption.value = 'new';
-                        newOption.textContent = '+ Create New Category';
-                        categorySelect.appendChild(newOption);
-                        
-                        resolve();
-                    } else {
-                        reject(new Error(data.message || 'Failed to load categories'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading categories:', error);
-                    reject(error);
-                });
-        } catch (error) {
-            console.error('Error in loadCategoriesAsync function:', error);
-            reject(error);
+async function loadCategories() {
+    try {
+        // Get user profile from localStorage
+        const userProfile = window.getUserProfile();
+        if (!userProfile || !userProfile.user_id) {
+            console.warn('User ID not found in profile');
+            return;
         }
-    });
+        
+        const userId = userProfile.user_id;
+        
+        // Try to fetch categories with retry
+        const categoriesData = await fetchWithRetry(`http://127.0.0.1:5000/api/categories?user_id=${userId}`);
+        
+        if (categoriesData.status === 'success') {
+            const categorySelect = document.getElementById('category');
+            
+            // Clear existing options except the first one
+            while (categorySelect.options.length > 1) {
+                categorySelect.remove(1);
+            }
+            
+            // Add categories
+            categoriesData.data.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.category_id;
+                option.textContent = category.category_name;
+                categorySelect.appendChild(option);
+            });
+            
+            // Add "Create New" option
+            const newOption = document.createElement('option');
+            newOption.value = 'new';
+            newOption.textContent = '+ Create New Category';
+            categorySelect.appendChild(newOption);
+            
+            // Set category from extracted data if available
+            setTimeout(() => {
+                if (window.extractedCategory) {
+                    let matchFound = false;
+                    
+                    // Try to find an exact match first
+                    for (let i = 0; i < categorySelect.options.length; i++) {
+                        const option = categorySelect.options[i];
+                        if (option.textContent.toLowerCase() === window.extractedCategory.toLowerCase()) {
+                            categorySelect.value = option.value;
+                            matchFound = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!matchFound) {
+                        // Select "Create New" and fill in the name
+                        categorySelect.value = 'new';
+                        const newCategoryGroup = document.getElementById('new-category-group');
+                        newCategoryGroup.classList.remove('hidden');
+                        document.getElementById('new-category').value = window.extractedCategory;
+                        document.getElementById('new-category').setAttribute('required', true);
+                    }
+                }
+            }, 100); // Reduced from 200ms to 100ms for quicker response
+        } else {
+            throw new Error(categoriesData.message || 'Failed to load categories');
+        }
+    } catch (error) {
+        console.error('Error loading categories:', error);
+        // Show toast but don't interrupt the flow
+        window.showToast('Error loading categories. Try refreshing the page.');
+    }
 }
 
 // Load vendors asynchronously and return a promise
 /**
- * Load vendors asynchronously and return a promise
- * @param {string} userId - The user ID
- * @returns {Promise} Promise that resolves when vendors are loaded
+ * Load vendors from API with improved error handling and retry logic
  */
-function loadVendorsAsync(userId) {
-    return new Promise((resolve, reject) => {
-        try {
-            fetch(`http://127.0.0.1:5000/api/vendors?user_id=${userId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Failed to load vendors: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.status === 'success') {
-                        const vendorSelect = document.getElementById('vendor');
-                        
-                        // Clear existing options except the first one
-                        while (vendorSelect.options.length > 1) {
-                            vendorSelect.remove(1);
-                        }
-                        
-                        // Add vendors
-                        data.data.forEach(vendor => {
-                            const option = document.createElement('option');
-                            option.value = vendor.vendor_id;
-                            option.textContent = vendor.vendor_name;
-                            option.dataset.categoryId = vendor.category_id;
-                            vendorSelect.appendChild(option);
-                        });
-                        
-                        // Add "Create New" option
-                        const newOption = document.createElement('option');
-                        newOption.value = 'new';
-                        newOption.textContent = '+ Create New Vendor';
-                        vendorSelect.appendChild(newOption);
-                        
-                        resolve();
-                    } else {
-                        reject(new Error(data.message || 'Failed to load vendors'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading vendors:', error);
-                    reject(error);
-                });
-        } catch (error) {
-            console.error('Error in loadVendorsAsync function:', error);
-            reject(error);
+async function loadVendors() {
+    try {
+        // Get user profile from localStorage
+        const userProfile = window.getUserProfile();
+        if (!userProfile || !userProfile.user_id) {
+            console.warn('User ID not found in profile');
+            return;
         }
-    });
+        
+        const userId = userProfile.user_id;
+        
+        // Try to fetch vendors with retry
+        const vendorsData = await fetchWithRetry(`http://127.0.0.1:5000/api/vendors?user_id=${userId}`);
+        
+        if (vendorsData.status === 'success') {
+            const vendorSelect = document.getElementById('vendor');
+            
+            // Clear existing options except the first one
+            while (vendorSelect.options.length > 1) {
+                vendorSelect.remove(1);
+            }
+            
+            // Add vendors
+            vendorsData.data.forEach(vendor => {
+                const option = document.createElement('option');
+                option.value = vendor.vendor_id;
+                option.textContent = vendor.vendor_name;
+                option.dataset.categoryId = vendor.category_id;
+                vendorSelect.appendChild(option);
+            });
+            
+            // Add "Create New" option
+            const newOption = document.createElement('option');
+            newOption.value = 'new';
+            newOption.textContent = '+ Create New Vendor';
+            vendorSelect.appendChild(newOption);
+            
+            // Set vendor from extracted data if available
+            setTimeout(() => {
+                if (window.extractedVendor) {
+                    let matchFound = false;
+                    
+                    // Try to find an exact match first
+                    for (let i = 0; i < vendorSelect.options.length; i++) {
+                        const option = vendorSelect.options[i];
+                        if (option.textContent.toLowerCase() === window.extractedVendor.toLowerCase()) {
+                            vendorSelect.value = option.value;
+                            matchFound = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!matchFound) {
+                        // Select "Create New" and fill in the name
+                        vendorSelect.value = 'new';
+                        const newVendorGroup = document.getElementById('new-vendor-group');
+                        newVendorGroup.classList.remove('hidden');
+                        document.getElementById('new-vendor').value = window.extractedVendor;
+                        document.getElementById('new-vendor').setAttribute('required', true);
+                    }
+                }
+            }, 100); // Reduced from 300ms to 100ms for better performance
+        } else {
+            throw new Error(vendorsData.message || 'Failed to load vendors');
+        }
+    } catch (error) {
+        console.error('Error loading vendors:', error);
+        // Show toast but don't interrupt the flow
+        window.showToast('Error loading vendors. Try refreshing the page.');
+    }
 }
 
 // Save transaction to the backend
@@ -1098,5 +1250,38 @@ function handleFileSelection(file) {
             attachmentImage.classList.remove('hidden');
         };
         reader.readAsDataURL(file);
+    }
+}
+
+// Fetch with retry functionality
+/**
+ * Fetch with retry functionality
+ * @param {string} url - The URL to fetch
+ * @param {Object} options - Fetch options
+ * @param {number} retries - Number of retries (default: 3)
+ * @param {number} delay - Delay between retries in ms (default: 1000)
+ * @returns {Promise<Object>} - Promise resolving to JSON response
+ */
+async function fetchWithRetry(url, options = {}, retries = 3, delay = 1000) {
+    try {
+        const response = await fetch(url, options);
+        
+        if (!response.ok) {
+            throw new Error(`Server responded with status: ${response.status}`);
+        }
+        
+        return await response.json();
+    } catch (error) {
+        if (retries <= 0) {
+            throw error;
+        }
+        
+        console.log(`Retrying fetch for ${url}. Retries left: ${retries-1}`);
+        
+        // Wait for the specified delay
+        await new Promise(resolve => setTimeout(resolve, delay));
+        
+        // Retry with one fewer retry remaining
+        return fetchWithRetry(url, options, retries - 1, delay);
     }
 }

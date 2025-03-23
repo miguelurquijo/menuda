@@ -152,26 +152,5 @@
 
     <script src="./js/app.js"></script>
     <script src="./js/transaction-detail.js"></script>
-
-    <!--REFRESH CACHE-->
-    <script>
-        // Clear browser cache for this page
-        window.addEventListener('load', function() {
-            if (window.performance && window.performance.navigation.type !== 1) {
-                // If not a page refresh already, force one
-                window.location.reload(true);
-            }
-        });
-        
-        // Clear service worker cache if it exists
-        if ('caches' in window) {
-            caches.keys().then(function(names) {
-                names.forEach(function(name) {
-                    caches.delete(name);
-                });
-            });
-        }
-    </script>
-    
 </body>
 </html>
