@@ -689,7 +689,7 @@ function loadVendors() {
 
 // Load transaction details for editing
 /**
- * Load transaction details for editing with improved timing and request management
+ * Fixed loadTransaction function to properly handle timeout
  * @param {string} transactionId - The ID of the transaction to load
  */
 async function loadTransaction(transactionId) {
@@ -700,6 +700,9 @@ async function loadTransaction(transactionId) {
     loadingOverlay.classList.remove('hidden');
     transactionForm.classList.add('hidden');
     
+    // For tracking timeouts
+    let timeoutId = null;
+    
     try {
         const userProfile = window.getUserProfile();
         if (!userProfile || !userProfile.user_id) {
@@ -707,47 +710,77 @@ async function loadTransaction(transactionId) {
         }
         
         const userId = userProfile.user_id;
+
+        // Create a controller for aborting requests if needed
+        const controller = new AbortController();
+        const signal = controller.signal;
+
+        // Create a timeout that will abort the requests if they take too long
+        timeoutId = setTimeout(() => {
+            controller.abort();
+            console.log('Request timed out, aborting...');
+        }, 8000); // 8 second timeout
         
-        // Create a request timeout promise to handle network issues
-        const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Request timed out')), 10000); // 10 second timeout
-        });
-        
-        // Load all data in parallel with proper error handling and timeout
-        const [categories, vendors, transactionResponse] = await Promise.all([
-            // Get categories with retry
-            fetchWithRetry(`http://127.0.0.1:5000/api/categories?user_id=${userId}`),
-            // Get vendors with retry
-            fetchWithRetry(`http://127.0.0.1:5000/api/vendors?user_id=${userId}`),
-            // Get transaction with retry
-            fetchWithRetry(`http://127.0.0.1:5000/api/transactions/${transactionId}?user_id=${userId}`)
-        ]);
-        
-        // Process categories
-        if (categories.status === 'success') {
-            populateCategories(categories.data);
-        } else {
-            console.warn('Failed to load categories:', categories.message);
-        }
-        
-        // Process vendors
-        if (vendors.status === 'success') {
-            populateVendors(vendors.data);
-        } else {
-            console.warn('Failed to load vendors:', vendors.message);
-        }
-        
-        // Process transaction
-        if (transactionResponse.status === 'success') {
-            populateTransactionForm(transactionResponse.data);
-        } else {
-            throw new Error(transactionResponse.message || 'Failed to load transaction');
+        try {
+            // Load all data in parallel with proper error handling and timeout
+            const [categories, vendors, transactionResponse] = await Promise.all([
+                // Get categories with retry, passing the abort signal
+                fetchWithRetry(`http://127.0.0.1:5000/api/categories?user_id=${userId}`, { signal }),
+                // Get vendors with retry, passing the abort signal
+                fetchWithRetry(`http://127.0.0.1:5000/api/vendors?user_id=${userId}`, { signal }),
+                // Get transaction with retry, passing the abort signal
+                fetchWithRetry(`http://127.0.0.1:5000/api/transactions/${transactionId}?user_id=${userId}`, { signal })
+            ]);
+            
+            // Clear the timeout since requests completed successfully
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+
+            // Process categories
+            if (categories.status === 'success') {
+                populateCategories(categories.data);
+            } else {
+                console.warn('Failed to load categories:', categories.message);
+            }
+            
+            // Process vendors
+            if (vendors.status === 'success') {
+                populateVendors(vendors.data);
+            } else {
+                console.warn('Failed to load vendors:', vendors.message);
+            }
+            
+            // Process transaction
+            if (transactionResponse.status === 'success') {
+                populateTransactionForm(transactionResponse.data);
+            } else {
+                throw new Error(transactionResponse.message || 'Failed to load transaction');
+            }
+        } catch (error) {
+            // Make sure to clear the timeout on error
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+            
+            if (error.name === 'AbortError') {
+                throw new Error('Request timed out. Please check your connection and try again.');
+            }
+            throw error;
         }
         
         // Hide loading overlay when finished
         loadingOverlay.style.display = 'none';
         transactionForm.classList.remove('hidden');
     } catch (error) {
+        // Ensure timeout is cleared if still active
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+        }
+        
         console.error('Error loading transaction:', error);
         window.showToast('Error loading transaction details: ' + error.message);
         
@@ -755,7 +788,7 @@ async function loadTransaction(transactionId) {
         setTimeout(() => {
             loadingOverlay.style.display = 'none';
             transactionForm.classList.remove('hidden');
-        }, 500);
+        }, 300);
     }
 }
 
@@ -1255,12 +1288,7 @@ function handleFileSelection(file) {
 
 // Fetch with retry functionality
 /**
- * Fetch with retry functionality
- * @param {string} url - The URL to fetch
- * @param {Object} options - Fetch options
- * @param {number} retries - Number of retries (default: 3)
- * @param {number} delay - Delay between retries in ms (default: 1000)
- * @returns {Promise<Object>} - Promise resolving to JSON response
+ * Updated fetchWithRetry to handle AbortController signals
  */
 async function fetchWithRetry(url, options = {}, retries = 3, delay = 1000) {
     try {
@@ -1272,6 +1300,11 @@ async function fetchWithRetry(url, options = {}, retries = 3, delay = 1000) {
         
         return await response.json();
     } catch (error) {
+        // If this is an abort error, don't retry
+        if (error.name === 'AbortError') {
+            throw error;
+        }
+        
         if (retries <= 0) {
             throw error;
         }
@@ -1281,7 +1314,7 @@ async function fetchWithRetry(url, options = {}, retries = 3, delay = 1000) {
         // Wait for the specified delay
         await new Promise(resolve => setTimeout(resolve, delay));
         
-        // Retry with one fewer retry remaining
+        // Retry with one fewer retry remaining, and preserve the signal if present
         return fetchWithRetry(url, options, retries - 1, delay);
     }
 }
