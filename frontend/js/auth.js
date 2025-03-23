@@ -57,7 +57,7 @@ function decodeJwtResponse(token) {
 async function checkUserAndGetUUID(userData) {
     try {
         // API endpoint for user checking/creation
-        const endpoint = 'http://localhost:5000/api/users/check';
+        const endpoint = 'http://127.0.0.1:5000/api/users/check';
         
         // Make request to backend
         const response = await fetch(endpoint, {

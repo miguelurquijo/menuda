@@ -147,7 +147,7 @@ class QuickAccessComponent {
             formData.append('user_id', userProfile.user_id);
             
             // Send the file directly to the invoice processing endpoint
-            const response = await fetch('http://localhost:5000/api/invoices/process', {
+            const response = await fetch('http://127.0.0.1:5000/api/invoices/process', {
                 method: 'POST',
                 body: formData
             });
@@ -170,7 +170,7 @@ class QuickAccessComponent {
             uploadFormData.append('file', file);
             uploadFormData.append('user_id', userProfile.user_id);
             
-            const uploadResponse = await fetch('http://localhost:5000/api/attachments/upload', {
+            const uploadResponse = await fetch('http://127.0.0.1:5000/api/attachments/upload', {
                 method: 'POST',
                 body: uploadFormData
             });

@@ -77,11 +77,9 @@ async function initTransactionsPage() {
  * @param {string} userId - The user ID to fetch transactions for
  * @return {Promise<Array>} Promise resolving to array of transactions
  */
-
-
 async function fetchUserTransactions(userId) {
     try {
-        const response = await fetch(`http://localhost:5000/api/transactions?user_id=${userId}`);
+        const response = await fetch(`http://127.0.0.1:5000/api/transactions?user_id=${userId}`);
         
         if (!response.ok) {
             throw new Error(`Server responded with status: ${response.status}`);

@@ -1,8 +1,141 @@
 /**
  * Transaction Detail Page
  * Handles creating, viewing, and editing transaction records
+ * 
+ * This file centralizes all transaction-related logic including:
+ * - Creating transactions
+ * - Editing transactions
+ * - Processing invoice images
+ * - Attachment handling
+ * - Category and vendor management
  */
 
+// Define global utility functions first, before DOM loading
+// IMPORTANT: These functions are defined globally to be accessible from QuickAccessComponent
+// These must be at the top of the file and outside any event handlers
+
+// Process an invoice image and extract data
+/**
+ * Process an invoice image and extract data
+ * @param {File} file - The invoice image file
+ * @returns {Promise<Object>} - Object with the processed data and redirect URL
+ */
+window.processInvoiceImage = async function(file) {
+    try {
+        // Get user profile
+        const userProfile = getUserProfile();
+        if (!userProfile || !userProfile.user_id) {
+            throw new Error('User profile not found');
+        }
+        
+        // Create FormData object to send the file for processing
+        const formData = new FormData();
+        formData.append('invoice', file);  // Backend expects 'invoice' field name
+        formData.append('user_id', userProfile.user_id);
+        
+        // Send the file directly to the invoice processing endpoint
+        const response = await fetch('http://127.0.0.1:5000/api/invoices/process', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Error processing invoice: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.status !== 'success') {
+            throw new Error(data.message || 'Failed to process invoice');
+        }
+        
+        // Get the extracted data
+        const invoiceData = data.data;
+        
+        // Now upload the same file to get a permanent URL
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', file);
+        uploadFormData.append('user_id', userProfile.user_id);
+        
+        const uploadResponse = await fetch('http://127.0.0.1:5000/api/attachments/upload', {
+            method: 'POST',
+            body: uploadFormData
+        });
+        
+        if (!uploadResponse.ok) {
+            throw new Error(`Error uploading image: ${uploadResponse.status}`);
+        }
+        
+        const uploadData = await uploadResponse.json();
+        
+        if (uploadData.status !== 'success') {
+            throw new Error(uploadData.message || 'Failed to upload image');
+        }
+        
+        // Create URL parameters with all data including attachment
+        const params = new URLSearchParams();
+        params.append('prefill', 'true');
+        params.append('title', invoiceData.title || '');
+        params.append('amount', invoiceData.amount || '');
+        params.append('date', invoiceData.date || '');
+        params.append('category', invoiceData.category || '');
+        params.append('vendor', invoiceData.vendor || '');
+        params.append('attachment_url', uploadData.data.url);
+        params.append('attachment_type', uploadData.data.type);
+        
+        return {
+            success: true,
+            redirectUrl: `transaction-detail.html?${params.toString()}`
+        };
+        
+    } catch (error) {
+        console.error('Error processing invoice:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+};
+
+// Get user profile from localStorage
+/**
+ * Get user profile from localStorage
+ * @returns {Object|null} User profile or null if not found
+ */
+window.getUserProfile = function() {
+    const userProfileString = localStorage.getItem('userProfile');
+    return userProfileString ? JSON.parse(userProfileString) : null;
+};
+
+// Show a toast notification
+/**
+ * Show a toast notification
+ * @param {string} message - The message to display
+ */
+window.showToast = function(message) {
+    const toast = document.getElementById('toast');
+    if (toast) {
+        toast.textContent = message;
+        toast.classList.remove('hidden');
+        
+        // Hide toast after 3 seconds
+        setTimeout(() => {
+            toast.classList.add('hidden');
+        }, 3000);
+    } else {
+        // Fallback if toast element doesn't exist
+        console.log('Toast message:', message);
+    }
+};
+
+// Verify global functions are available
+console.log('Global functions initialized:', {
+    processInvoiceImage: typeof window.processInvoiceImage === 'function',
+    getUserProfile: typeof window.getUserProfile === 'function',
+    showToast: typeof window.showToast === 'function'
+});
+
+// Now continue with the rest of the script
 document.addEventListener('DOMContentLoaded', function() {
     // Check URL parameters for prefill data
     const urlParams = new URLSearchParams(window.location.search);
@@ -60,17 +193,21 @@ document.addEventListener('DOMContentLoaded', function() {
     initPage();
 });
 
-// Add event listener to the attachment preview
-document.getElementById('attachment-image').addEventListener('click', function() {
-    const url = this.src;
-    if (url) {
-        window.open(url, '_blank');
+// Add event listener to the attachment preview when element exists
+document.addEventListener('DOMContentLoaded', function() {
+    const attachmentImage = document.getElementById('attachment-image');
+    if (attachmentImage) {
+        attachmentImage.addEventListener('click', function() {
+            const url = this.src;
+            if (url) {
+                window.open(url, '_blank');
+            }
+        });
     }
 });
 
-/**
- * Initialize page elements and event listeners
- */
+
+ // Initialize page elements and event listeners
 function initPage() {
     const backButton = document.getElementById('back-button');
     const form = document.getElementById('transaction-form');
@@ -150,13 +287,13 @@ function initPage() {
         try {
             console.log('Form submission started');
             // Show loading state
-            showToast('Saving transaction...');
+            window.showToast('Saving transaction...');
             
             // Get form data
             const formData = new FormData(form);
             
             // Get user profile
-            const userProfile = getUserProfile();
+            const userProfile = window.getUserProfile();
             if (!userProfile || !userProfile.user_id) {
                 throw new Error('User profile not found');
             }
@@ -189,7 +326,7 @@ function initPage() {
                     uploadFormData.append('file', file);
                     uploadFormData.append('user_id', userProfile.user_id);
                     
-                    const uploadResponse = await fetch('http://localhost:5000/api/attachments/upload', {
+                    const uploadResponse = await fetch('http://127.0.0.1:5000/api/attachments/upload', {
                         method: 'POST',
                         body: uploadFormData
                     });
@@ -263,7 +400,7 @@ function initPage() {
         
     } catch (error) {
         console.error('Error saving transaction:', error);
-        showToast('Error: ' + error.message);
+        window.showToast('Error: ' + error.message);
     }
     });
     
@@ -272,7 +409,7 @@ function initPage() {
         if (confirm('Are you sure you want to delete this transaction?')) {
             try {
                 await deleteTransaction(transactionId);
-                showToast('Transaction deleted successfully');
+                window.showToast('Transaction deleted successfully');
                 
                 // Use replace instead of href
                 setTimeout(() => {
@@ -280,7 +417,7 @@ function initPage() {
                 }, 1000);
             } catch (error) {
                 console.error('Error deleting transaction:', error);
-                showToast('Error deleting transaction: ' + error.message);
+                window.showToast('Error deleting transaction: ' + error.message);
             }
         }
     });
@@ -303,18 +440,8 @@ function initPage() {
         fileInput.value = '';
     });
 }
-
+// Create a new category
 /**
- * Get user profile from localStorage
- * @returns {Object|null} User profile or null if not found
- */
-function getUserProfile() {
-    const userProfileString = localStorage.getItem('userProfile');
-    return userProfileString ? JSON.parse(userProfileString) : null;
-}
-
-/**
- * Create a new category
  * @param {string} userId - The user ID
  * @param {string} categoryName - The name of the new category
  * @returns {Promise<Object>} Promise resolving to new category object
@@ -326,7 +453,7 @@ async function createCategory(userId, categoryName) {
             category_name: categoryName
         };
         
-        const response = await fetch('http://localhost:5000/api/categories', {
+        const response = await fetch('http://127.0.0.1:5000/api/categories', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -351,6 +478,7 @@ async function createCategory(userId, categoryName) {
     }
 }
 
+// Create a new vendor
 /**
  * Create a new vendor
  * @param {string} userId - The user ID
@@ -366,7 +494,7 @@ async function createVendor(userId, vendorName, categoryId) {
             category_id: categoryId
         };
         
-        const response = await fetch('http://localhost:5000/api/vendors', {
+        const response = await fetch('http://127.0.0.1:5000/api/vendors', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -391,13 +519,14 @@ async function createVendor(userId, vendorName, categoryId) {
     }
 }
 
+// Load categories from API
 /**
  * Load categories from API
  */
 function loadCategories() {
     try {
         // Get user profile from localStorage
-        const userProfile = getUserProfile();
+        const userProfile = window.getUserProfile();
         if (!userProfile || !userProfile.user_id) {
             console.warn('User ID not found in profile');
             return;
@@ -406,7 +535,7 @@ function loadCategories() {
         const userId = userProfile.user_id;
         
         // Now make the API call with the correct userId
-        fetch(`http://localhost:5000/api/categories?user_id=${userId}`)
+        fetch(`http://127.0.0.1:5000/api/categories?user_id=${userId}`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`Failed to load categories: ${response.status}`);
@@ -465,20 +594,21 @@ function loadCategories() {
             })
             .catch(error => {
                 console.error('Error loading categories:', error);
-                showToast('Error loading categories');
+                window.showToast('Error loading categories');
             });
     } catch (error) {
         console.error('Error in loadCategories function:', error);
     }
 }
 
+// Load vendors from API
 /**
  * Load vendors from API
  */
 function loadVendors() {
     try {
         // Get user profile from localStorage
-        const userProfile = getUserProfile();
+        const userProfile = window.getUserProfile();
         if (!userProfile || !userProfile.user_id) {
             console.warn('User ID not found in profile');
             return;
@@ -487,7 +617,7 @@ function loadVendors() {
         const userId = userProfile.user_id;
         
         // Now make the API call with the correct userId
-        fetch(`http://localhost:5000/api/vendors?user_id=${userId}`)
+        fetch(`http://127.0.0.1:5000/api/vendors?user_id=${userId}`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`Failed to load vendors: ${response.status}`);
@@ -547,13 +677,14 @@ function loadVendors() {
             })
             .catch(error => {
                 console.error('Error loading vendors:', error);
-                showToast('Error loading vendors');
+                window.showToast('Error loading vendors');
             });
     } catch (error) {
         console.error('Error in loadVendors function:', error);
     }
 }
 
+// Load transaction details for editing
 /**
  * Load transaction details for editing
  * @param {string} transactionId - The ID of the transaction to load
@@ -567,7 +698,7 @@ async function loadTransaction(transactionId) {
     transactionForm.classList.add('hidden');
     
     try {
-        const userProfile = getUserProfile();
+        const userProfile = window.getUserProfile();
         if (!userProfile || !userProfile.user_id) {
             throw new Error('User profile not found');
         }
@@ -579,7 +710,7 @@ async function loadTransaction(transactionId) {
         const vendorsPromise = loadVendorsAsync(userId);
         
         // Then fetch transaction data
-        const response = await fetch(`http://localhost:5000/api/transactions/${transactionId}?user_id=${userId}`);
+        const response = await fetch(`http://127.0.0.1:5000/api/transactions/${transactionId}?user_id=${userId}`);
         
         if (!response.ok) {
             throw new Error(`Failed to load transaction (${response.status})`);
@@ -663,13 +794,14 @@ async function loadTransaction(transactionId) {
         transactionForm.classList.remove('hidden');
     } catch (error) {
         console.error('Error loading transaction:', error);
-        showToast('Error loading transaction details: ' + error.message);
+        window.showToast('Error loading transaction details: ' + error.message);
         
         // Hide loading overlay on error
         loadingOverlay.style.display = 'none';
     }
 }
 
+// Load categories asynchronously and return a promise
 /**
  * Load categories asynchronously and return a promise
  * @param {string} userId - The user ID
@@ -678,7 +810,7 @@ async function loadTransaction(transactionId) {
 function loadCategoriesAsync(userId) {
     return new Promise((resolve, reject) => {
         try {
-            fetch(`http://localhost:5000/api/categories?user_id=${userId}`)
+            fetch(`http://127.0.0.1:5000/api/categories?user_id=${userId}`)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(`Failed to load categories: ${response.status}`);
@@ -724,6 +856,7 @@ function loadCategoriesAsync(userId) {
     });
 }
 
+// Load vendors asynchronously and return a promise
 /**
  * Load vendors asynchronously and return a promise
  * @param {string} userId - The user ID
@@ -732,7 +865,7 @@ function loadCategoriesAsync(userId) {
 function loadVendorsAsync(userId) {
     return new Promise((resolve, reject) => {
         try {
-            fetch(`http://localhost:5000/api/vendors?user_id=${userId}`)
+            fetch(`http://127.0.0.1:5000/api/vendors?user_id=${userId}`)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(`Failed to load vendors: ${response.status}`);
@@ -779,6 +912,7 @@ function loadVendorsAsync(userId) {
     });
 }
 
+// Save transaction to the backend
 /**
  * Save transaction to the backend
  * @param {Object} transactionData - The transaction data to save
@@ -808,8 +942,8 @@ async function saveTransaction(transactionData) {
         
         const isUpdate = !!transactionData.transaction_id;
         const url = isUpdate 
-            ? `http://localhost:5000/api/transactions/${transactionData.transaction_id}` 
-            : 'http://localhost:5000/api/transactions';
+            ? `http://127.0.0.1:5000/api/transactions/${transactionData.transaction_id}` 
+            : 'http://127.0.0.1:5000/api/transactions';
         const method = isUpdate ? 'PUT' : 'POST';
         
         console.log(`Sending ${method} request to ${url}`);
@@ -885,7 +1019,7 @@ async function saveTransaction(transactionData) {
         }
 
         // Show success message and immediately redirect
-        showToast('Transaction saved successfully');
+        window.showToast('Transaction saved successfully');
 
         // Use window.location.replace instead of window.location.href to prevent adding to browser history
         setTimeout(() => {
@@ -899,19 +1033,20 @@ async function saveTransaction(transactionData) {
     }
 }
 
+// Delete a transaction
 /**
  * Delete a transaction
  * @param {string} transactionId - The ID of the transaction to delete
  */
 async function deleteTransaction(transactionId) {
     try {
-        const userProfile = getUserProfile();
+        const userProfile = window.getUserProfile();
         if (!userProfile || !userProfile.user_id) {
             throw new Error('User profile not found');
         }
         
         const userId = userProfile.user_id;
-        const response = await fetch(`http://localhost:5000/api/transactions/${transactionId}?user_id=${userId}`, {
+        const response = await fetch(`http://127.0.0.1:5000/api/transactions/${transactionId}?user_id=${userId}`, {
             method: 'DELETE'
         });
         
@@ -933,6 +1068,7 @@ async function deleteTransaction(transactionId) {
     }
 }
 
+// Handle file selection for attachment
 /**
  * Handle file selection for attachment
  * @param {File} file - The selected file
@@ -962,135 +1098,5 @@ function handleFileSelection(file) {
             attachmentImage.classList.remove('hidden');
         };
         reader.readAsDataURL(file);
-    }
-}
-
-/**
- * Handle file upload for attachments
- * @param {File} file - The file to upload
- * @param {Object} transactionData - The transaction data to update with attachment info
- */
-async function handleFileUpload(file, transactionData) {
-    // In a real implementation, you would upload the file to a server
-    // and get back a URL. For this prototype, we'll simulate it.
-    
-    // Determine attachment type
-    let attachmentType = 'file';
-    if (file.type.startsWith('image/')) {
-        attachmentType = 'image';
-    } else if (file.type === 'application/pdf') {
-        attachmentType = 'pdf';
-    } else if (file.type.startsWith('audio/')) {
-        attachmentType = 'audio';
-    }
-    
-    // In a real implementation, this would be the URL returned from the server
-    // For this prototype, we're simulating it
-    const mockUploadUrl = `https://storage.menuda.com/attachments/${Date.now()}_${file.name}`;
-    
-    // Update transaction data with attachment info
-    transactionData.attachment_url = mockUploadUrl;
-    transactionData.attachment_type = attachmentType;
-    
-    return true;
-}
-
-/**
- * Show a toast notification
- * @param {string} message - The message to display
- */
-function showToast(message) {
-    const toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.classList.remove('hidden');
-    
-    // Hide toast after 3 seconds
-    setTimeout(() => {
-        toast.classList.add('hidden');
-    }, 3000);
-}
-
-/**
- * Upload file to server
- * @param {File} file - The file to upload
- * @param {string} userId - User ID for the attachment
- * @returns {Promise<Object>} Promise resolving to upload result with URL
- */
-async function uploadAttachment(file, userId) {
-    try {
-        if (!file) {
-            return null;
-        }
-        
-        // Show upload progress
-        const uploadProgress = document.getElementById('upload-progress');
-        const progressFill = document.getElementById('progress-fill');
-        const progressText = document.getElementById('progress-text');
-        
-        uploadProgress.classList.remove('hidden');
-        progressFill.style.width = '0%';
-        progressText.textContent = 'Uploading... 0%';
-        
-        // Create form data
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('user_id', userId);
-        
-        return new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            
-            // Track upload progress
-            xhr.upload.addEventListener('progress', (event) => {
-                if (event.lengthComputable) {
-                    const percentComplete = Math.round((event.loaded / event.total) * 100);
-                    progressFill.style.width = percentComplete + '%';
-                    progressText.textContent = `Uploading... ${percentComplete}%`;
-                }
-            });
-            
-            // Handle response
-            xhr.addEventListener('load', () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    // Success
-                    progressText.textContent = 'Upload complete!';
-                    setTimeout(() => {
-                        uploadProgress.classList.add('hidden');
-                    }, 1000);
-                    
-                    try {
-                        const response = JSON.parse(xhr.responseText);
-                        resolve(response);
-                    } catch (error) {
-                        reject(new Error('Invalid response format'));
-                    }
-                } else {
-                    // Error
-                    progressText.textContent = 'Upload failed!';
-                    progressFill.style.backgroundColor = 'var(--error-color)';
-                    reject(new Error(`Upload failed with status ${xhr.status}`));
-                }
-            });
-            
-            // Handle error
-            xhr.addEventListener('error', () => {
-                progressText.textContent = 'Upload failed!';
-                progressFill.style.backgroundColor = 'var(--error-color)';
-                reject(new Error('Network error during upload'));
-            });
-            
-            // Make sure we don't follow any redirects
-            xhr.addEventListener('readystatechange', () => {
-                if (xhr.readyState === 4) {
-                    console.log('XHR complete, status:', xhr.status);
-                }
-            });
-            
-            // Open and send request
-            xhr.open('POST', 'http://localhost:5000/api/attachments/upload', true);
-            xhr.send(formData);
-        });
-    } catch (error) {
-        console.error('Error uploading attachment:', error);
-        throw error;
     }
 }
