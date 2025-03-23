@@ -294,6 +294,78 @@
     animation-fill-mode: forwards;
 }
 
+/* Neumorphic Loading Overlay Styles */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #e0e0e0; /* Base background color */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.neumorphic-spinner {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background-color: #e0e0e0;
+    box-shadow: 
+        inset 6px 6px 10px #bebebe,
+        inset -6px -6px 10px #ffffff;
+    position: relative;
+    animation: rotate 1.5s infinite linear;
+}
+
+.neumorphic-spinner::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    border-radius: 50%;
+    background-color: #e0e0e0;
+    box-shadow: 
+        6px 6px 10px #bebebe,
+        -6px -6px 10px #ffffff;
+}
+
+@keyframes rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.loading-overlay p {
+    margin-top: 1.5rem;
+    font-size: 1rem;
+    color: var(--text-color);
+}
+
+/* Optional: Adjust text color for better visibility */
+:root {
+    --primary-color: #6400B9;
+    --primary-dark: #4d008f;
+    --text-color: #333;
+    --border-color: #ddd;
+    --error-color: #dc3545;
+    --error-dark: #c82333;
+
+    /* Neumorphic variables */
+    --neumorphism-bg: #e0e0e0;
+    --neumorphism-shadow-light: #ffffff;
+    --neumorphism-shadow-dark: #bebebe;
+}
+
+
 @keyframes fadeIn {
     from { opacity: 0; transform: translate(-50%, 2rem); }
     to { opacity: 1; transform: translate(-50%, 0); }

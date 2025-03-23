@@ -135,19 +135,18 @@ class QuickAccessComponent {
             // Show loading message
             this.showLoadingToast('Procesando factura...');
             
-            // Create FormData object to send the file
-            const formData = new FormData();
-            formData.append('invoice', file);
-            
             // Get user profile
             const userProfile = this.getUserProfile();
             if (!userProfile || !userProfile.user_id) {
                 throw new Error('User profile not found');
             }
             
+            // Create FormData object to send the file for processing
+            const formData = new FormData();
+            formData.append('invoice', file);  // Backend expects 'invoice' field name
             formData.append('user_id', userProfile.user_id);
             
-            // Send file to backend for processing
+            // Send the file directly to the invoice processing endpoint
             const response = await fetch('http://localhost:5000/api/invoices/process', {
                 method: 'POST',
                 body: formData
@@ -166,7 +165,27 @@ class QuickAccessComponent {
             // Get the extracted data
             const invoiceData = data.data;
             
-            // Create URL parameters
+            // Now upload the same file to get a permanent URL
+            const uploadFormData = new FormData();
+            uploadFormData.append('file', file);
+            uploadFormData.append('user_id', userProfile.user_id);
+            
+            const uploadResponse = await fetch('http://localhost:5000/api/attachments/upload', {
+                method: 'POST',
+                body: uploadFormData
+            });
+            
+            if (!uploadResponse.ok) {
+                throw new Error(`Error uploading image: ${uploadResponse.status}`);
+            }
+            
+            const uploadData = await uploadResponse.json();
+            
+            if (uploadData.status !== 'success') {
+                throw new Error(uploadData.message || 'Failed to upload image');
+            }
+            
+            // Create URL parameters with all data including attachment
             const params = new URLSearchParams();
             params.append('prefill', 'true');
             params.append('title', invoiceData.title || '');
@@ -174,9 +193,11 @@ class QuickAccessComponent {
             params.append('date', invoiceData.date || '');
             params.append('category', invoiceData.category || '');
             params.append('vendor', invoiceData.vendor || '');
+            params.append('attachment_url', uploadData.data.url);
+            params.append('attachment_type', uploadData.data.type);
             
             // Navigate to transaction form with data in URL
-            window.location.href = `./transaction-detail.html?${params.toString()}`;
+            window.location.href = `transaction-detail.html?${params.toString()}`;
             
         } catch (error) {
             console.error('Error processing invoice:', error);

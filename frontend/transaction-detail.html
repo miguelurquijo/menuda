@@ -33,10 +33,12 @@
     </header>
 
     <main class="container">
-        <div id="loading-overlay" class="loading-overlay">
-            <div class="spinner"></div>
-            <p>Loading transaction details...</p>
+        <!--Animacion de carga mietnras carga-->
+        <div id="loading-overlay" class="loading-overlay hidden">
+            <div class="neumorphic-spinner" data-lh-id="neumorphic-spinner"></div>
+            <p>Cargando la transaccion...</p>
         </div>
+
         <form id="transaction-form" class="transaction-form">
             <input type="hidden" id="transaction-id" name="transaction_id">
             

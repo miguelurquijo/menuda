@@ -1,5 +1,16 @@
 """
 Attachment handling routes for Menuda Finance API
+
+This module provides endpoints for handling file attachments:
+
+- POST /attachments/upload: Handles file uploads with the following features:
+  - Stores files in user-specific directories
+  - Generates unique filenames using UUID
+  - Supports multiple file types (images, PDFs, other files)
+  - Returns file URL and detected attachment type
+  - Includes basic error handling and validation
+
+File storage is currently local (in 'uploads' directory), with potential for CDN/storage service integration in production.
 """
 import os
 import uuid

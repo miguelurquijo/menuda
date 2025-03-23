@@ -27,7 +27,7 @@ def create_app():
     # Enable CORS for all routes
     CORS(app, resources={
         "/api/*": {
-            "origins": ["http://127.0.0.1:8080", "http://localhost:8080", "http://192.168.1.10:8080"],
+            "origins": ["http://127.0.0.1:8080", "http://localhost:8080", "http://192.168.1.10:8080", "http://localhost:5500"],
             "methods": ["GET", "POST", "PUT", "DELETE"],
             "allow_headers": ["Content-Type"]
         }
