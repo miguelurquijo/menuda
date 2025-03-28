@@ -6,6 +6,8 @@ import uuid
 from flask import Blueprint, request, jsonify
 import requests
 from utils.db import get_db_connection, close_connection
+from utils.s3 import S3Manager
+
 
 # Create blueprint
 invoices_bp = Blueprint('invoices', __name__)
@@ -13,7 +15,7 @@ invoices_bp = Blueprint('invoices', __name__)
 @invoices_bp.route('/invoices/process', methods=['POST'])
 def process_invoice():
     """
-    Process an invoice image using OpenAI
+    Process an invoice image using OpenAI and store in S3
     Returns:
         JSON: Extracted invoice data
     """
@@ -50,6 +52,18 @@ def process_invoice():
         
         # Process with OpenAI API
         extracted_data = process_with_openai(temp_filepath, user_id)
+        
+        # Upload to S3
+        s3_manager = S3Manager()
+        file_url = s3_manager.upload_file(
+            temp_filepath,
+            user_id,
+            content_type=invoice_file.content_type
+        )
+        
+        # Add the S3 URL to the extracted data
+        extracted_data['attachment_url'] = file_url
+        extracted_data['attachment_type'] = 'image' if file_ext.lower() in ['jpg', 'jpeg', 'png', 'gif'] else 'file'
         
         # Clean up the temporary file
         if os.path.exists(temp_filepath):
@@ -171,11 +185,8 @@ def process_with_openai(image_path, user_id):
             if field not in extracted_data:
                 extracted_data[field] = ""
         
-        print("OpenAI API raw response:", result)
-        print("Extracted text:", extracted_text)
         return extracted_data
     
-        
     except Exception as e:
         print(f"Error processing with OpenAI: {e}")
         raise

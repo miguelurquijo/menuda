@@ -1,6 +1,6 @@
 .quick-access-container {
   position: fixed;
-  bottom: 96px; /* Position above navigation menu */
+  bottom: 104px; /* Position above navigation menu */
   right: 20px;
   z-index: 1000;
   display: flex;

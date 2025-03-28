@@ -8,7 +8,7 @@ class QuickAccessComponent {
         this.menu = null;
         this.isOpen = false;
     }
-
+    // Initializes the quick access component
     /**
      * Initializes the quick access component
      */
@@ -39,6 +39,7 @@ class QuickAccessComponent {
         }
     }
 
+    // Mounts the component to the DOM
     /**
      * Mounts the component to the DOM
      * @param {HTMLElement} template - The template element
@@ -56,6 +57,7 @@ class QuickAccessComponent {
         this.attachEventListeners();
     }
 
+    // Attaches event listeners to component elements
     /**
      * Attaches event listeners to component elements
      */
@@ -72,6 +74,7 @@ class QuickAccessComponent {
         });
     }
 
+    // Toggles the quick access menu open/closed
     /**
      * Toggles the quick access menu open/closed
      */
@@ -81,6 +84,7 @@ class QuickAccessComponent {
         this.menu.classList.toggle('visible', this.isOpen);
     }
 
+    // Handles click events on menu options
     /**
      * Handles click events on menu options
      * @param {string} action - The action to perform
@@ -103,6 +107,7 @@ class QuickAccessComponent {
         this.toggleMenu();
     }
 
+    // Handles invoice upload action
     /**
      * Handles invoice upload action
      */
@@ -126,6 +131,7 @@ class QuickAccessComponent {
         fileInput.click();
     }
 
+    // Process the invoice image and extract data
     /**
      * Process the invoice image and extract data
      * @param {File} file - The selected image file
@@ -207,6 +213,7 @@ class QuickAccessComponent {
         }
     }
 
+    // Get user profile from localStorage
     /**
      * Get user profile from localStorage
      * @returns {Object|null} User profile or null if not found
@@ -216,6 +223,7 @@ class QuickAccessComponent {
         return userProfileString ? JSON.parse(userProfileString) : null;
     }
 
+    // Show a loading toast notification
     /**
      * Show a loading toast notification
      * @param {string} message - The message to display
@@ -234,6 +242,7 @@ class QuickAccessComponent {
         toast.classList.add('visible');
     }
 
+    // Hide the loading toast notification
     /**
      * Hide the loading toast notification
      */
@@ -244,6 +253,7 @@ class QuickAccessComponent {
         }
     }
 
+    // Show an error toast notification
     /**
      * Show an error toast notification
      * @param {string} message - The message to display

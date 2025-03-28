@@ -4,11 +4,11 @@ Attachment handling routes for Menuda Finance API
 This module provides endpoints for handling file attachments:
 
 - POST /attachments/upload: Handles file uploads with the following features:
-  - Stores files in user-specific directories
-  - Generates unique filenames using UUID
-  - Supports multiple file types (images, PDFs, other files)
-  - Returns file URL and detected attachment type
-  - Includes basic error handling and validation
+    - Stores files in user-specific directories
+    - Generates unique filenames using UUID
+    - Supports multiple file types (images, PDFs, other files)
+    - Returns file URL and detected attachment type
+    - Includes basic error handling and validation
 
 File storage is currently local (in 'uploads' directory), with potential for CDN/storage service integration in production.
 """
@@ -16,6 +16,8 @@ import os
 import uuid
 from datetime import datetime
 from flask import Blueprint, request, jsonify, current_app
+from utils.s3 import S3Manager
+
 
 # Create blueprint
 attachments_bp = Blueprint('attachments', __name__)
@@ -23,7 +25,7 @@ attachments_bp = Blueprint('attachments', __name__)
 @attachments_bp.route('/attachments/upload', methods=['POST'])
 def upload_attachment():
     """
-    Handle file upload and store in file system
+    Handle file upload and store in Amazon S3
     Returns:
         JSON: Data with URL and attachment type
     """
@@ -53,17 +55,25 @@ def upload_attachment():
         }), 400
     
     try:
-        # Create upload directory if it doesn't exist
-        upload_dir = os.path.join(os.getcwd(), 'uploads', user_id)
-        os.makedirs(upload_dir, exist_ok=True)
+        # Create S3 manager
+        s3_manager = S3Manager()
         
-        # Generate unique filename
+        # Get file extension
         file_ext = os.path.splitext(file.filename)[1].lower()
-        safe_filename = f"{uuid.uuid4().hex}{file_ext}"
-        file_path = os.path.join(upload_dir, safe_filename)
         
-        # Save file
-        file.save(file_path)
+        # Save file temporarily
+        temp_path = os.path.join('/tmp', f"{uuid.uuid4().hex}{file_ext}")
+        file.save(temp_path)
+        
+        # Upload to S3
+        file_url = s3_manager.upload_file(
+            temp_path, 
+            user_id, 
+            content_type=file.content_type
+        )
+        
+        # Remove temporary file
+        os.remove(temp_path)
         
         # Determine attachment type
         attachment_type = 'file'
@@ -72,16 +82,13 @@ def upload_attachment():
         elif file.content_type == 'application/pdf':
             attachment_type = 'pdf'
         
-        # Generate URL (in production, this would be a CDN or storage service URL)
-        file_url = f"/uploads/{user_id}/{safe_filename}"
-        
         return jsonify({
             'status': 'success',
             'message': 'File uploaded successfully',
             'data': {
                 'url': file_url,
                 'type': attachment_type,
-                'filename': safe_filename
+                'filename': os.path.basename(file_url)
             }
         })
         

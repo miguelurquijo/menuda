@@ -24,12 +24,13 @@ def create_app():
     """
     app = Flask(__name__)
     
-    # Enable CORS for all routes
+    # Enable CORS for all routes with proper configuration
     CORS(app, resources={
         "/api/*": {
             "origins": ["http://127.0.0.1:8080", "http://localhost:8080", "http://192.168.1.10:8080", "http://localhost:5500"],
-            "methods": ["GET", "POST", "PUT", "DELETE"],
-            "allow_headers": ["Content-Type"]
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], 
+            "allow_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True
         }
     })
     
@@ -47,14 +48,7 @@ def create_app():
     def health_check():
         """Health check endpoint"""
         return {'status': 'healthy', 'service': 'Menuda Finance API'}
-    
 
-    @app.route('/uploads/<user_id>/<filename>')
-    def uploaded_file(user_id, filename):
-        """
-        Serve uploaded files
-        """
-        return send_from_directory(os.path.join(os.getcwd(), 'uploads', user_id), filename)
     
     return app
 
