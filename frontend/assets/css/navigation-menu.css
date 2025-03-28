@@ -39,11 +39,11 @@
 
 /* Updated active state to ensure both icon and text change color */
 .nav-link.active {
-    color: #6400B9;
+    color: #5350F6;
 }
 
 .nav-link.active .circle-icon {
-    background-color: #6400B9;
+    background-color: #5350F6;
 }
 
 .nav-icon {

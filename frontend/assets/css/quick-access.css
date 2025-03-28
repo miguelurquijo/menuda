@@ -13,7 +13,7 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background-color: #E19BFF;
+  background-color: #5350F6;
   border: none;
   cursor: pointer;
   display: flex;
@@ -25,7 +25,7 @@
 }
 
 .quick-access-button.active {
-  background-color: #6400B9;
+  background-color: #5350F6;
 }
 
 .quick-access-icon {
@@ -57,7 +57,7 @@
 .quick-access-option {
   padding: 8px 16px;
   background-color: white;
-  border: 2px solid #E19BFF;
+  border: 2px solid #5350F6;
   border-radius: 20px;
   cursor: pointer;
   font-size: 14px;
@@ -66,7 +66,7 @@
 }
 
 .quick-access-option:hover {
-  background-color: #E19BFF;
+  background-color: #5350F6;
   color: white;
 }
 

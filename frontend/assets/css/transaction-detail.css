@@ -1,7 +1,7 @@
 /* Transaction Detail Page Styles */
 
 :root {
-    --primary-color: #6400B9;
+    --primary-color: #5350F6;
     --primary-dark: #4d008f;
     --text-color: #333;
     --border-color: #ddd;
@@ -352,7 +352,7 @@
 
 /* Optional: Adjust text color for better visibility */
 :root {
-    --primary-color: #6400B9;
+    --primary-color: #5350F6;
     --primary-dark: #4d008f;
     --text-color: #333;
     --border-color: #ddd;
