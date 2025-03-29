@@ -12,6 +12,7 @@ const urlsToCache = [
     '/frontend/assets/css/quick-access.css',
     '/frontend/assets/css/transactions.css',
     '/frontend/assets/css/transaction-detail.css',
+    '/frontend/assets/css/user-header.css',
     '/frontend/js/auth.js',
     '/frontend/js/app.js',
     '/frontend/js/transactions.js',
@@ -19,8 +20,10 @@ const urlsToCache = [
     '/frontend/js/components/loadComponents.js',
     '/frontend/js/components/NavigationComponent.js',
     '/frontend/js/components/QuickAccessComponent.js',
+    '/frontend/js/components/UserHeaderComponent.js',
     '/frontend/components/navigation-menu.html',
     '/frontend/components/quick-access.html',
+    '/frontend/components/user-header.html',
     '/frontend/manifest.json'
 ];
 

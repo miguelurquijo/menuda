@@ -1,12 +1,17 @@
 // frontend/js/components/loadComponents.js
 import NavigationComponent from './NavigationComponent.js';
 import QuickAccessComponent from './QuickAccessComponent.js';
+import UserHeaderComponent from './UserHeaderComponent.js';
 import CacheBuster from '../utils/cache-buster.js';
 
 /**
  * Initializes and loads all components for the page
  */
 function initComponents() {
+    // Initialize user header
+    const userHeader = new UserHeaderComponent();
+    userHeader.mount('header-placeholder');
+    
     // Initialize navigation
     const navigation = new NavigationComponent();
     navigation.mount('nav-placeholder');

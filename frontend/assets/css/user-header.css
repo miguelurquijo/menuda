@@ -1,0 +1,59 @@
+/* frontend/assets/css/user-header.css */
+.user-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 16px;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    /* Remove background */
+    background-color: transparent;
+  }
+  
+  .user-greeting {
+    font-size: 26px;
+    font-weight: 700;
+    color: #5350F6; /* Updated color */
+    margin: 0;
+    white-space: nowrap; /* Prevent line breaks */
+  }
+  
+  .user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: transparent;
+  }
+  
+  #user-picture {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  #default-avatar {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .hidden {
+    display: none;
+  }
+  
+  /* Add this to create space below the fixed header */
+  body {
+    padding-top: 80px;
+  }
+  
+  /* Main content container adjustments */
+  .content-container {
+    margin-top: 60px;
+  }
