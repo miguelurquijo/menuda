@@ -10,14 +10,12 @@
     left: 0;
     right: 0;
     z-index: 100;
-    /* Remove background */
-    background-color: transparent;
   }
   
   .user-greeting {
     font-size: 26px;
     font-weight: 700;
-    color: #5350F6; /* Updated color */
+    color: #1F1F1F; /* Updated color */
     margin: 0;
     white-space: nowrap; /* Prevent line breaks */
   }
