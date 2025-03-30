@@ -1,15 +1,15 @@
 /* Navigation Menu Component Styles */
 .nav-container {
     position: fixed;
-    bottom: 20px; /* Add space from bottom for floating effect */
-    left: 50%;
-    transform: translateX(-50%); /* Center horizontally */
-    width: 90%; /* Reduce width for floating appearance */
-    max-width: 500px; /* Set a max width */
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
     background: #ffffff;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); /* Enhanced shadow for floating effect */
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
     z-index: 1000;
-    border-radius: 50px; /* Rounded borders */
+    border-top: 1px solid #eaeaea;
+    overflow-x: hidden; /* Prevent horizontal scrolling */
 }
 
 .nav-list {

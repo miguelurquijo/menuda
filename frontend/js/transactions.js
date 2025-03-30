@@ -186,3 +186,4 @@ function displayTransactions(transactions) {
 function viewTransactionDetails(transactionId) {
     window.location.href = `transaction-detail.html?id=${transactionId}`;
 }
+

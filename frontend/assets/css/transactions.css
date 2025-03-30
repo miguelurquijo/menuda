@@ -3,7 +3,7 @@
 /* Section styles */
 .transactions-section {
     padding: 1rem;
-    margin-bottom: 70px; /* Space for navigation menu */
+    margin-bottom: 85px; /* Increased space for full-width navigation menu */
 }
 
 /* Container styles */
