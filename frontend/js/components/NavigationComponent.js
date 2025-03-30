@@ -1,6 +1,5 @@
 /**
- * Navigation Menu Component
- * Creates and manages the bottom navigation bar
+ * Navigation Menu Component - SVG Compatible Version
  */
 class NavigationComponent {
     constructor() {
@@ -21,49 +20,54 @@ class NavigationComponent {
             if (!container) {
                 throw new Error(`Element with id '${elementId}' not found`);
             }
+            
+            // Set the inner HTML
             container.innerHTML = this.template;
             
-            // Initialize the navigation after mounting
+            // Initialize active state
             this.initializeNavigation();
+            
+            console.log('Navigation menu loaded successfully');
         } catch (error) {
             console.error('Error loading navigation:', error);
         }
     }
 
     initializeNavigation() {
-        const navLinks = document.querySelectorAll('.nav-link');
+        const navBtns = document.querySelectorAll('.nav-btn');
         const currentPath = window.location.pathname;
 
         // Set initial active state based on current path
         this.updateActiveState(currentPath);
 
         // Add click event listeners
-        navLinks.forEach(link => {
-            link.addEventListener('click', this.handleNavClick.bind(this));
+        navBtns.forEach(btn => {
+            btn.addEventListener('click', this.handleNavClick.bind(this));
         });
     }
 
     updateActiveState(currentPath) {
-        const navLinks = document.querySelectorAll('.nav-link');
-        navLinks.forEach(link => {
-            link.classList.remove('active');
+        const navBtns = document.querySelectorAll('.nav-btn');
+        navBtns.forEach(btn => {
+            btn.classList.remove('active');
+            
             // Get the href and compare it to the current path
-            const href = link.getAttribute('href');
-            const hrefPath = href.startsWith('./') ? href.slice(2) : href; // Remove './' if present
+            const href = btn.getAttribute('href');
+            const hrefPath = href.startsWith('./') ? href.slice(2) : href;
             const currentPagePath = currentPath.split('/').pop() || 'home.html';
             
             if (hrefPath === currentPagePath) {
-                link.classList.add('active');
+                btn.classList.add('active');
             } else if (currentPagePath === '' && hrefPath === 'home.html') {
                 // Handle root path case
-                link.classList.add('active');
+                btn.classList.add('active');
             }
         });
     }
 
     handleNavClick(e) {
-        const navLinks = document.querySelectorAll('.nav-link');
-        navLinks.forEach(link => link.classList.remove('active'));
+        const navBtns = document.querySelectorAll('.nav-btn');
+        navBtns.forEach(btn => btn.classList.remove('active'));
         e.currentTarget.classList.add('active');
     }
 }
