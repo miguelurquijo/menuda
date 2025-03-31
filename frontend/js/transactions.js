@@ -1,189 +1,163 @@
 /**
  * Menuda Finance - Transactions Management
- * Handles fetching and displaying user transactions
+ * Mobile-optimized version
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Check if user is logged in
-    if (!checkUserLoggedIn()) {
+    // Check user login and load transactions
+    const userProfile = localStorage.getItem('userProfile');
+    if (!userProfile) {
         window.location.href = '../index.html';
         return;
     }
-
-    // Initialize the transactions page
-    initTransactionsPage();
+    
+    const userData = JSON.parse(userProfile);
+    loadTransactions(userData.user_id);
 });
 
 /**
- * Check if user is logged in without causing infinite recursion
- * @return {boolean} True if user is logged in
+ * Load transactions from the API
  */
-function checkUserLoggedIn() {
-    const userProfile = localStorage.getItem('userProfile');
-    return !!userProfile && !!JSON.parse(userProfile).user_id;
-}
-
-/**
- * Initialize the transactions page
- */
-async function initTransactionsPage() {
+async function loadTransactions(userId) {
     try {
-        // Show loading state
-        const transactionsContainer = document.getElementById('transactions-container');
-        if (transactionsContainer) {
-            transactionsContainer.innerHTML = '<p class="loading">Loading transactions...</p>';
-        }
-
-        // Get current user ID from localStorage directly
-        const userProfile = localStorage.getItem('userProfile');
-        if (!userProfile) {
-            throw new Error('User profile not found');
-        }
+        const container = document.getElementById('transactions-container');
+        container.innerHTML = '<p class="loading">Loading transactions...</p>';
         
-        const userId = JSON.parse(userProfile).user_id;
-        if (!userId) {
-            throw new Error('User ID not found');
-        }
-
-        // Display user info if the element exists
-        const userProfileElement = document.getElementById('user-profile');
-        if (userProfileElement) {
-            const user = JSON.parse(userProfile);
-            userProfileElement.innerHTML = `
-                <div class="user-info">
-                    <img src="${user.picture}" alt="${user.name}" class="profile-pic">
-                    <span>${user.name}</span>
-                </div>
-            `;
-        }
-
-        // Fetch transactions from API
-        const transactions = await fetchUserTransactions(userId);
-        
-        // Display transactions
-        displayTransactions(transactions);
-        
-    } catch (error) {
-        console.error('Error initializing transactions page:', error);
-        const transactionsContainer = document.getElementById('transactions-container');
-        if (transactionsContainer) {
-            transactionsContainer.innerHTML = `<p class="error">Error loading transactions: ${error.message}</p>`;
-        }
-    }
-}
-
-/**
- * Fetch user transactions from the API
- * @param {string} userId - The user ID to fetch transactions for
- * @return {Promise<Array>} Promise resolving to array of transactions
- */
-async function fetchUserTransactions(userId) {
-    try {
         const response = await fetch(`http://127.0.0.1:5000/api/transactions?user_id=${userId}`);
         
         if (!response.ok) {
-            throw new Error(`Server responded with status: ${response.status}`);
+            throw new Error(`Error: ${response.status}`);
         }
         
-        const data = await response.json();
+        const result = await response.json();
         
-        if (data.status !== 'success') {
-            throw new Error(data.message || 'Failed to fetch transactions');
+        if (result.status !== 'success') {
+            throw new Error(result.message || 'Failed to load transactions');
         }
         
-        return data.data;
+        displayTransactions(result.data);
     } catch (error) {
-        console.error('Error fetching transactions:', error);
-        throw error;
+        console.error('Error loading transactions:', error);
+        const container = document.getElementById('transactions-container');
+        container.innerHTML = `<p class="error">Error loading transactions</p>`;
     }
 }
 
 /**
- * Display transactions in the transactions container
- * @param {Array} transactions - Array of transaction objects
+ * Display transactions in the UI
  */
 function displayTransactions(transactions) {
-    const transactionsContainer = document.getElementById('transactions-container');
-    
-    if (!transactionsContainer) {
-        console.error('Transactions container not found');
-        return;
-    }
+    const container = document.getElementById('transactions-container');
     
     if (!transactions || transactions.length === 0) {
-        transactionsContainer.innerHTML = '<p class="empty">No transactions found</p>';
+        container.innerHTML = '<p class="empty">No transactions found</p>';
         return;
     }
     
-    // Create transactions table
-    let tableHtml = `
-        <table class="transactions-table" data-lh-id="transactions-table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Description</th>
-                    <th>Category</th>
-                    <th>Vendor</th>
-                    <th>Amount</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
+    // Group by date
+    const groups = groupByDate(transactions);
+    let html = '';
     
-    // Add transaction rows
-    transactions.forEach(transaction => {
-        // Format date
-        const date = new Date(transaction.transaction_date);
-        const formattedDate = date.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric' 
-        });
+    // Generate HTML for each date group
+    Object.keys(groups).forEach(date => {
+        html += `<h2 class="date-header">${date}</h2>`;
         
-        // Format amount (positive for income, negative for expense)
-        const amount = parseFloat(transaction.amount);
-        const formattedAmount = new Intl.NumberFormat('en-US', { 
-            style: 'currency', 
-            currency: 'USD' 
-        }).format(amount);
-        
-        const amountClass = amount >= 0 ? 'positive' : 'negative';
-        
-        // Add attachment indicator if there's an attachment
-        const hasAttachment = transaction.attachment_url ? true : false;
-        const attachmentIcon = hasAttachment ? 
-            '<span class="attachment-icon" title="Has attachment">📎</span>' : '';
-        
-        tableHtml += `
-            <tr data-lh-id="transaction-row" data-transaction-id="${transaction.transaction_id}" class="transaction-row">
-                <td>${formattedDate}</td>
-                <td>${transaction.title} ${attachmentIcon}</td>
-                <td>${transaction.category_name}</td>
-                <td>${transaction.vendor_name}</td>
-                <td class="${amountClass}">${formattedAmount}</td>
-            </tr>
-        `;
-    });
-    
-    tableHtml += `
-            </tbody>
-        </table>
-    `;
-    
-    transactionsContainer.innerHTML = tableHtml;
-    
-    // Add click event to transaction rows
-    const transactionRows = document.querySelectorAll('.transaction-row');
-    transactionRows.forEach(row => {
-        row.addEventListener('click', () => {
-            const transactionId = row.getAttribute('data-transaction-id');
-            viewTransactionDetails(transactionId);
+        groups[date].forEach(transaction => {
+            // Format amount
+            const amount = formatAmount(transaction.amount);
+            
+            // Add attachment icon if needed
+            const attachmentIcon = transaction.attachment_url ? 
+                '<span class="attachment-icon">📎</span>' : '';
+            
+            html += `
+            <div class="transaction-item" onclick="viewTransactionDetail('${transaction.transaction_id}')">
+                <div class="transaction-icon">
+                    <div class="circle-icon"></div>
+                </div>
+                <div class="transaction-details">
+                    <div class="transaction-title">${transaction.title} ${attachmentIcon}</div>
+                    <div class="transaction-category">${transaction.category_name}</div>
+                </div>
+                <div class="transaction-amount">${amount}</div>
+            </div>`;
         });
     });
+    
+    container.innerHTML = html;
 }
 
-// Function to view transaction details
-function viewTransactionDetails(transactionId) {
+/**
+ * Group transactions by date with Spanish date format
+ */
+function groupByDate(transactions) {
+    const groups = {};
+    
+    transactions.forEach(transaction => {
+        const date = new Date(transaction.transaction_date);
+        
+        // Format the date for display
+        let dateLabel;
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        
+        const transDate = new Date(date);
+        transDate.setHours(0, 0, 0, 0);
+        
+        if (transDate.getTime() === today.getTime()) {
+            dateLabel = 'Hoy';
+        } else if (transDate.getTime() === yesterday.getTime()) {
+            dateLabel = 'Ayer';
+        } else {
+            // Spanish format: day + month name
+            const day = date.getDate();
+            
+            // Get month name in Spanish
+            const monthNames = [
+                'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+            ];
+            const month = monthNames[date.getMonth()];
+            
+            dateLabel = `${day} ${month}`;
+        }
+        
+        if (!groups[dateLabel]) {
+            groups[dateLabel] = [];
+        }
+        
+        groups[dateLabel].push(transaction);
+    });
+    
+    return groups;
+}
+
+/**
+ * Format amount for display without decimals and without currency symbol
+ */
+function formatAmount(amount) {
+    // Format number with thousand separators but no currency symbol
+    const formattedNumber = new Intl.NumberFormat('es-ES', { 
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(amount);
+    
+    // Add the dollar sign manually
+    return '$' + formattedNumber;
+}
+
+
+
+/**
+ * Navigate to transaction detail page
+ */
+function viewTransactionDetail(transactionId) {
     window.location.href = `transaction-detail.html?id=${transactionId}`;
 }
 
+// Make function available globally
+window.viewTransactionDetail = viewTransactionDetail;
